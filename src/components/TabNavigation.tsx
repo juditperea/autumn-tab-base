@@ -1,6 +1,7 @@
 import { Home, Search, ScanLine, Users, User } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const tabs = [
   { path: "/", icon: Home, label: "Inicio" },
@@ -11,6 +12,14 @@ const tabs = [
 ];
 
 export const TabNavigation = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  // Don't show navigation on auth page or if not authenticated
+  if (!user || location.pathname === '/auth') {
+    return null;
+  }
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-warm">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
