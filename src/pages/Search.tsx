@@ -1,16 +1,50 @@
+import { useState, useMemo } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Search as SearchIcon, TrendingUp, Sparkles } from "lucide-react";
+import { Search as SearchIcon, TrendingUp, Sparkles, Loader2 } from "lucide-react";
+import { useBooks, useSearchBooks } from "@/hooks/useBooks";
+import { useUserBooks } from "@/hooks/useUserBooks";
+import { BookCard } from "@/components/books/BookCard";
 
 const Search = () => {
-  const trendingBooks = [
-    { title: "El nombre del viento", author: "Patrick Rothfuss", genre: "Fantasía" },
-    { title: "Cien años de soledad", author: "Gabriel García Márquez", genre: "Realismo mágico" },
-    { title: "1984", author: "George Orwell", genre: "Distopía" },
-  ];
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  
+  const { data: allBooks, isLoading: booksLoading } = useBooks();
+  const { data: searchResults, isLoading: searchLoading } = useSearchBooks(searchQuery);
+  const { data: userBooks } = useUserBooks();
 
-  const genres = ["Fantasía", "Ciencia ficción", "Romance", "Thriller", "No ficción"];
+  // Get unique genres from all books
+  const genres = useMemo(() => {
+    if (!allBooks) return [];
+    const allGenres = allBooks.flatMap(book => book.genres);
+    return [...new Set(allGenres)].slice(0, 8);
+  }, [allBooks]);
+
+  // Filter books based on search and genre
+  const displayBooks = useMemo(() => {
+    if (searchQuery.trim()) {
+      return searchResults ?? [];
+    }
+    
+    if (selectedGenre && allBooks) {
+      return allBooks.filter(book => book.genres.includes(selectedGenre));
+    }
+    
+    return allBooks ?? [];
+  }, [searchQuery, searchResults, selectedGenre, allBooks]);
+
+  // Get user book data for each book
+  const getUserBookData = (bookId: string) => {
+    const userBook = userBooks?.find(ub => ub.book_id === bookId);
+    return {
+      status: userBook?.status ?? null,
+      rating: userBook?.rating ?? null,
+    };
+  };
+
+  const isLoading = booksLoading || (searchQuery && searchLoading);
 
   return (
     <div className="min-h-screen pb-20 bg-background">
@@ -30,32 +64,13 @@ const Search = () => {
           <Input
             placeholder="Buscar libros, autores..."
             className="pl-10 h-12 rounded-xl shadow-card"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSelectedGenre(null);
+            }}
           />
         </div>
-
-        {/* Trending Books */}
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Tendencias</h2>
-          </div>
-          <div className="space-y-3">
-            {trendingBooks.map((book, index) => (
-              <Card key={index} className="p-4 shadow-card hover:shadow-warm tab-transition cursor-pointer">
-                <div className="flex gap-3">
-                  <div className="w-12 h-16 rounded-lg bg-gradient-autumn" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground">{book.title}</h3>
-                    <p className="text-sm text-muted-foreground">{book.author}</p>
-                    <span className="inline-block mt-1 text-xs px-2 py-1 rounded-full bg-secondary/20 text-secondary">
-                      {book.genre}
-                    </span>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </section>
 
         {/* Genres */}
         <section>
@@ -67,12 +82,66 @@ const Search = () => {
             {genres.map((genre) => (
               <button
                 key={genre}
-                className="px-4 py-2 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-foreground tab-transition"
+                onClick={() => {
+                  setSelectedGenre(selectedGenre === genre ? null : genre);
+                  setSearchQuery("");
+                }}
+                className={`px-4 py-2 rounded-full tab-transition ${
+                  selectedGenre === genre
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-primary/20 text-foreground"
+                }`}
               >
                 {genre}
               </button>
             ))}
           </div>
+        </section>
+
+        {/* Books List */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">
+              {searchQuery 
+                ? `Resultados para "${searchQuery}"` 
+                : selectedGenre 
+                  ? `Libros de ${selectedGenre}`
+                  : "Todos los libros"}
+            </h2>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : displayBooks.length > 0 ? (
+            <div className="space-y-3">
+              {displayBooks.map((book) => {
+                const userData = getUserBookData(book.id);
+                return (
+                  <BookCard
+                    key={book.id}
+                    book={book}
+                    userStatus={userData.status}
+                    userRating={userData.rating}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="p-8 text-center shadow-card">
+              <SearchIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+              <h3 className="font-semibold text-foreground mb-2">
+                No se encontraron libros
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {searchQuery 
+                  ? "Intenta con otros términos de búsqueda"
+                  : "No hay libros disponibles en este momento"}
+              </p>
+            </Card>
+          )}
         </section>
       </main>
     </div>
