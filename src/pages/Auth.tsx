@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,21 +7,44 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUsernameAvailability } from "@/hooks/useUsernameAvailability";
 import { z } from "zod";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Check, X, Loader2 } from "lucide-react";
 
-const authSchema = z.object({
+const loginSchema = z.object({
   email: z.string().trim().email({ message: "Email inválido" }).max(255),
   password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres" }).max(100),
-  username: z.string().trim().min(3, { message: "El nombre de usuario debe tener al menos 3 caracteres" }).max(50).optional(),
+});
+
+const signupSchema = z.object({
+  email: z.string().trim().email({ message: "Email inválido" }).max(255),
+  password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres" }).max(100),
+  username: z
+    .string()
+    .trim()
+    .min(3, { message: "El nombre de usuario debe tener al menos 3 caracteres" })
+    .max(50, { message: "El nombre de usuario debe tener menos de 50 caracteres" })
+    .regex(/^[a-zA-Z0-9_]+$/, { message: "Solo letras, números y guiones bajos" }),
   fullName: z.string().trim().max(100).optional(),
 });
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [username, setUsername] = useState("");
+  
+  const { isAvailable, isChecking } = useUsernameAvailability(username);
+
+  // Redirigir si ya está autenticado
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
 
   const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -30,18 +53,13 @@ const Auth = () => {
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    const username = formData.get("username") as string;
+    const formUsername = formData.get("username") as string;
     const fullName = formData.get("fullName") as string;
 
     try {
-      // Validate input
-      const validationData = isLogin 
-        ? { email, password }
-        : { email, password, username, fullName };
-      
-      authSchema.parse(validationData);
-
       if (isLogin) {
+        loginSchema.parse({ email, password });
+        
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -60,6 +78,13 @@ const Auth = () => {
         });
         navigate("/");
       } else {
+        signupSchema.parse({ email, password, username: formUsername, fullName });
+
+        // Verificar disponibilidad de username antes de registrar
+        if (isAvailable === false) {
+          throw new Error("Este nombre de usuario ya está en uso");
+        }
+
         const redirectUrl = `${window.location.origin}/`;
         
         const { error } = await supabase.auth.signUp({
@@ -68,7 +93,7 @@ const Auth = () => {
           options: {
             emailRedirectTo: redirectUrl,
             data: {
-              username: username || email.split("@")[0],
+              username: formUsername,
               full_name: fullName || "",
             }
           }
@@ -77,6 +102,9 @@ const Auth = () => {
         if (error) {
           if (error.message.includes("User already registered")) {
             throw new Error("Este email ya está registrado");
+          }
+          if (error.message.includes("duplicate key") || error.message.includes("profiles_username_key")) {
+            throw new Error("Este nombre de usuario ya está en uso");
           }
           throw error;
         }
@@ -105,6 +133,11 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // No mostrar nada mientras se verifica si el usuario ya está autenticado
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-background">
@@ -161,14 +194,31 @@ const Auth = () => {
               <form onSubmit={handleAuth} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-username">Nombre de usuario</Label>
-                  <Input
-                    id="signup-username"
-                    name="username"
-                    type="text"
-                    placeholder="maria_lectora"
-                    required
-                    disabled={loading}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signup-username"
+                      name="username"
+                      type="text"
+                      placeholder="maria_lectora"
+                      required
+                      disabled={loading}
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="pr-10"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {isChecking && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                      {!isChecking && isAvailable === true && username.length >= 3 && (
+                        <Check className="w-4 h-4 text-green-500" />
+                      )}
+                      {!isChecking && isAvailable === false && (
+                        <X className="w-4 h-4 text-destructive" />
+                      )}
+                    </div>
+                  </div>
+                  {!isChecking && isAvailable === false && (
+                    <p className="text-sm text-destructive">Este nombre de usuario ya está en uso</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-fullname">Nombre completo (opcional)</Label>
@@ -202,7 +252,11 @@ const Auth = () => {
                     disabled={loading}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={loading || isChecking || isAvailable === false}
+                >
                   {loading ? "Creando cuenta..." : "Crear cuenta"}
                 </Button>
               </form>
