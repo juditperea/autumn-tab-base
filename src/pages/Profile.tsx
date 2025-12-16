@@ -7,6 +7,9 @@ import { Settings, BookOpen, Target, Award, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { BookShelf } from "@/components/books/BookShelf";
+import { useUserBooksStats } from "@/hooks/useUserBooks";
+import { useUserReviews } from "@/hooks/useReviews";
 
 interface Profile {
   username: string;
@@ -22,17 +25,20 @@ const Profile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const bookStats = useUserBooksStats();
+  const { data: userReviews } = useUserReviews(user?.id);
+
   const stats = [{
     label: "Libros leídos",
-    value: 0,
+    value: bookStats.read,
     icon: BookOpen
   }, {
     label: "Objetivo anual",
-    value: "0/0",
+    value: `${bookStats.read}/20`,
     icon: Target
   }, {
-    label: "Insignias",
-    value: 0,
+    label: "Reseñas",
+    value: userReviews?.length ?? 0,
     icon: Award
   }];
 
@@ -92,7 +98,8 @@ const Profile = () => {
     );
   }
 
-  return <div className="min-h-screen pb-20 bg-background">
+  return (
+    <div className="min-h-screen pb-20 bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border shadow-card">
         <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
@@ -137,40 +144,27 @@ const Profile = () => {
 
         {/* Stats */}
         <section className="grid grid-cols-3 gap-3">
-          {stats.map((stat, index) => <Card key={index} className="p-4 text-center shadow-card bg-orange-200">
+          {stats.map((stat, index) => (
+            <Card key={index} className="p-4 text-center shadow-card">
               <stat.icon className="w-6 h-6 mx-auto mb-2 text-primary" />
               <p className="text-2xl font-bold text-foreground mb-1">
                 {stat.value}
               </p>
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-            </Card>)}
+            </Card>
+          ))}
         </section>
 
-        {/* Reading Activity */}
+        {/* My Books */}
         <section>
           <h3 className="text-lg font-semibold text-foreground mb-4">
-            Actividad reciente
+            Mi biblioteca
           </h3>
-          <Card className="p-6 text-center shadow-card">
-            <BookOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-            <p className="text-muted-foreground">
-              Tu actividad aparecerá aquí
-            </p>
-          </Card>
-        </section>
-
-        {/* Favorite Genres */}
-        <section>
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Géneros favoritos
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {["Fantasía", "Young Adult", "Romance", "Thriller"].map(genre => <span key={genre} className="px-4 py-2 rounded-full bg-primary/10 text-primary font-medium">
-                {genre}
-              </span>)}
-          </div>
+          <BookShelf />
         </section>
       </main>
-    </div>;
+    </div>
+  );
 };
+
 export default Profile;

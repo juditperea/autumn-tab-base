@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      books: {
+        Row: {
+          authors: string[]
+          average_rating: number | null
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          genres: string[] | null
+          id: string
+          isbn10: string | null
+          isbn13: string | null
+          language: string | null
+          page_count: number | null
+          published_year: number | null
+          ratings_count: number | null
+          source: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          authors?: string[]
+          average_rating?: number | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          genres?: string[] | null
+          id?: string
+          isbn10?: string | null
+          isbn13?: string | null
+          language?: string | null
+          page_count?: number | null
+          published_year?: number | null
+          ratings_count?: number | null
+          source?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          authors?: string[]
+          average_rating?: number | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          genres?: string[] | null
+          id?: string
+          isbn10?: string | null
+          isbn13?: string | null
+          language?: string | null
+          page_count?: number | null
+          published_year?: number | null
+          ratings_count?: number | null
+          source?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -47,6 +104,150 @@ export type Database = {
         }
         Relationships: []
       }
+      review_votes: {
+        Row: {
+          created_at: string
+          id: string
+          review_id: string
+          user_id: string
+          vote: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          review_id: string
+          user_id: string
+          vote: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          review_id?: string
+          user_id?: string
+          vote?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_votes_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          book_id: string
+          contains_spoiler: boolean | null
+          content: string
+          created_at: string
+          id: string
+          language: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          contains_spoiler?: boolean | null
+          content: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          contains_spoiler?: boolean | null
+          content?: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_books: {
+        Row: {
+          book_id: string
+          created_at: string
+          finished_at: string | null
+          id: string
+          progress_pages: number | null
+          progress_percent: number | null
+          rating: number | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["reading_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          progress_pages?: number | null
+          progress_percent?: number | null
+          rating?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["reading_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          progress_pages?: number | null
+          progress_percent?: number | null
+          rating?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["reading_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_books_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_books_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -55,7 +256,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      reading_status: "to_read" | "reading" | "read" | "dnf"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -182,6 +383,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      reading_status: ["to_read", "reading", "read", "dnf"],
+    },
   },
 } as const
