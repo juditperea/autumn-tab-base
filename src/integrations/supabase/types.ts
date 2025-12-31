@@ -104,6 +104,48 @@ export type Database = {
         }
         Relationships: []
       }
+      review_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          review_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          review_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          review_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_comments_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_votes: {
         Row: {
           created_at: string

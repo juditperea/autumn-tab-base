@@ -2,14 +2,15 @@ import { useState, useMemo } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Search as SearchIcon, TrendingUp, Sparkles, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Search as SearchIcon, TrendingUp, Sparkles, Loader2, X } from "lucide-react";
 import { useBooks, useSearchBooks } from "@/hooks/useBooks";
 import { useUserBooks } from "@/hooks/useUserBooks";
 import { BookCard } from "@/components/books/BookCard";
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   
   const { data: allBooks, isLoading: booksLoading } = useBooks();
   const { data: searchResults, isLoading: searchLoading } = useSearchBooks(searchQuery);
@@ -19,21 +20,37 @@ const Search = () => {
   const genres = useMemo(() => {
     if (!allBooks) return [];
     const allGenres = allBooks.flatMap(book => book.genres);
-    return [...new Set(allGenres)].slice(0, 8);
+    return [...new Set(allGenres)].slice(0, 12);
   }, [allBooks]);
 
-  // Filter books based on search and genre
+  // Filter books based on search and genres (multiple)
   const displayBooks = useMemo(() => {
     if (searchQuery.trim()) {
       return searchResults ?? [];
     }
     
-    if (selectedGenre && allBooks) {
-      return allBooks.filter(book => book.genres.includes(selectedGenre));
+    if (selectedGenres.length > 0 && allBooks) {
+      return allBooks.filter(book => 
+        selectedGenres.every(genre => book.genres.includes(genre))
+      );
     }
     
     return allBooks ?? [];
-  }, [searchQuery, searchResults, selectedGenre, allBooks]);
+  }, [searchQuery, searchResults, selectedGenres, allBooks]);
+
+  // Toggle genre selection
+  const toggleGenre = (genre: string) => {
+    setSelectedGenres(prev => 
+      prev.includes(genre) 
+        ? prev.filter(g => g !== genre)
+        : [...prev, genre]
+    );
+    setSearchQuery("");
+  };
+
+  const clearGenres = () => {
+    setSelectedGenres([]);
+  };
 
   // Get user book data for each book
   const getUserBookData = (bookId: string) => {
@@ -67,34 +84,50 @@ const Search = () => {
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
-              setSelectedGenre(null);
+              if (e.target.value.trim()) {
+                setSelectedGenres([]);
+              }
             }}
           />
         </div>
 
         {/* Genres */}
         <section>
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-accent" />
-            <h2 className="text-lg font-semibold text-foreground">Explorar géneros</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-accent" />
+              <h2 className="text-lg font-semibold text-foreground">Explorar géneros</h2>
+            </div>
+            {selectedGenres.length > 0 && (
+              <button
+                onClick={clearGenres}
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <X className="w-4 h-4" />
+                Limpiar ({selectedGenres.length})
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {genres.map((genre) => (
-              <button
-                key={genre}
-                onClick={() => {
-                  setSelectedGenre(selectedGenre === genre ? null : genre);
-                  setSearchQuery("");
-                }}
-                className={`px-4 py-2 rounded-full tab-transition ${
-                  selectedGenre === genre
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted hover:bg-primary/20 text-foreground"
-                }`}
-              >
-                {genre}
-              </button>
-            ))}
+            {genres.map((genre) => {
+              const isSelected = selectedGenres.includes(genre);
+              return (
+                <button
+                  key={genre}
+                  onClick={() => toggleGenre(genre)}
+                  className={`px-4 py-2 rounded-full tab-transition ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-primary/20 text-foreground"
+                  }`}
+                >
+                  {genre}
+                  {isSelected && (
+                    <X className="w-3 h-3 ml-1 inline-block" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </section>
 
@@ -105,8 +138,8 @@ const Search = () => {
             <h2 className="text-lg font-semibold text-foreground">
               {searchQuery 
                 ? `Resultados para "${searchQuery}"` 
-                : selectedGenre 
-                  ? `Libros de ${selectedGenre}`
+                : selectedGenres.length > 0 
+                  ? `Libros de ${selectedGenres.join(" + ")}`
                   : "Todos los libros"}
             </h2>
           </div>
@@ -138,7 +171,9 @@ const Search = () => {
               <p className="text-sm text-muted-foreground">
                 {searchQuery 
                   ? "Intenta con otros términos de búsqueda"
-                  : "No hay libros disponibles en este momento"}
+                  : selectedGenres.length > 0
+                    ? "No hay libros que coincidan con todos los géneros seleccionados"
+                    : "No hay libros disponibles en este momento"}
               </p>
             </Card>
           )}
