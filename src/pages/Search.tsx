@@ -1,20 +1,42 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search as SearchIcon, TrendingUp, Sparkles, Loader2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search as SearchIcon, TrendingUp, Sparkles, Loader2, X, Globe, Library } from "lucide-react";
 import { useBooks, useSearchBooks } from "@/hooks/useBooks";
 import { useUserBooks } from "@/hooks/useUserBooks";
+import { useExternalBookSearch } from "@/hooks/useExternalBooks";
 import { BookCard } from "@/components/books/BookCard";
+import { ExternalBookCard } from "@/components/books/ExternalBookCard";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<"local" | "external">("local");
+  
+  const debouncedQuery = useDebounce(searchQuery, 500);
   
   const { data: allBooks, isLoading: booksLoading } = useBooks();
-  const { data: searchResults, isLoading: searchLoading } = useSearchBooks(searchQuery);
+  const { data: searchResults, isLoading: searchLoading } = useSearchBooks(debouncedQuery);
   const { data: userBooks } = useUserBooks();
+  
+  const { 
+    results: externalResults, 
+    isSearching: externalSearching, 
+    search: searchExternal,
+    clearResults: clearExternalResults 
+  } = useExternalBookSearch();
+
+  // Trigger external search when tab is external and query changes
+  useEffect(() => {
+    if (activeTab === "external" && debouncedQuery.trim()) {
+      searchExternal(debouncedQuery);
+    }
+  }, [activeTab, debouncedQuery]);
 
   // Get unique genres from all books
   const genres = useMemo(() => {
@@ -46,10 +68,20 @@ const Search = () => {
         : [...prev, genre]
     );
     setSearchQuery("");
+    setActiveTab("local");
   };
 
   const clearGenres = () => {
     setSelectedGenres([]);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (value.trim()) {
+      setSelectedGenres([]);
+    } else {
+      clearExternalResults();
+    }
   };
 
   // Get user book data for each book
@@ -62,6 +94,8 @@ const Search = () => {
   };
 
   const isLoading = booksLoading || (searchQuery && searchLoading);
+  const hasLocalResults = displayBooks.length > 0;
+  const hasExternalResults = externalResults.length > 0;
 
   return (
     <div className="min-h-screen pb-20 bg-background">
@@ -82,102 +116,199 @@ const Search = () => {
             placeholder="Buscar libros, autores..."
             className="pl-10 h-12 rounded-xl shadow-card"
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              if (e.target.value.trim()) {
-                setSelectedGenres([]);
-              }
-            }}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
 
-        {/* Genres */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-accent" />
-              <h2 className="text-lg font-semibold text-foreground">Explorar géneros</h2>
-            </div>
-            {selectedGenres.length > 0 && (
-              <button
-                onClick={clearGenres}
-                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
-              >
-                <X className="w-4 h-4" />
-                Limpiar ({selectedGenres.length})
-              </button>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {genres.map((genre) => {
-              const isSelected = selectedGenres.includes(genre);
-              return (
-                <button
-                  key={genre}
-                  onClick={() => toggleGenre(genre)}
-                  className={`px-4 py-2 rounded-full tab-transition ${
-                    isSelected
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-primary/20 text-foreground"
-                  }`}
-                >
-                  {genre}
-                  {isSelected && (
-                    <X className="w-3 h-3 ml-1 inline-block" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        {/* Tabs for local vs external search */}
+        {searchQuery.trim() && (
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "local" | "external")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="local" className="flex items-center gap-2">
+                <Library className="w-4 h-4" />
+                Biblioteca
+                {hasLocalResults && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {displayBooks.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="external" className="flex items-center gap-2">
+                <Globe className="w-4 h-4" />
+                Buscar en web
+                {hasExternalResults && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {externalResults.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Books List */}
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">
-              {searchQuery 
-                ? `Resultados para "${searchQuery}"` 
-                : selectedGenres.length > 0 
-                  ? `Libros de ${selectedGenres.join(" + ")}`
-                  : "Todos los libros"}
-            </h2>
-          </div>
+            <TabsContent value="local" className="mt-4">
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : displayBooks.length > 0 ? (
+                <div className="space-y-3">
+                  {displayBooks.map((book) => {
+                    const userData = getUserBookData(book.id);
+                    return (
+                      <BookCard
+                        key={book.id}
+                        book={book}
+                        userStatus={userData.status}
+                        userRating={userData.rating}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card className="p-8 text-center shadow-card">
+                  <SearchIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                  <h3 className="font-semibold text-foreground mb-2">
+                    No encontrado en la biblioteca
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Prueba a buscarlo en la web para añadirlo
+                  </p>
+                  <Button onClick={() => setActiveTab("external")}>
+                    <Globe className="w-4 h-4 mr-2" />
+                    Buscar en web
+                  </Button>
+                </Card>
+              )}
+            </TabsContent>
 
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : displayBooks.length > 0 ? (
-            <div className="space-y-3">
-              {displayBooks.map((book) => {
-                const userData = getUserBookData(book.id);
-                return (
-                  <BookCard
-                    key={book.id}
-                    book={book}
-                    userStatus={userData.status}
-                    userRating={userData.rating}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <Card className="p-8 text-center shadow-card">
-              <SearchIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-              <h3 className="font-semibold text-foreground mb-2">
-                No se encontraron libros
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {searchQuery 
-                  ? "Intenta con otros términos de búsqueda"
-                  : selectedGenres.length > 0
-                    ? "No hay libros que coincidan con todos los géneros seleccionados"
-                    : "No hay libros disponibles en este momento"}
-              </p>
-            </Card>
-          )}
-        </section>
+            <TabsContent value="external" className="mt-4">
+              {externalSearching ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-2">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">
+                    Buscando en Google Books y OpenLibrary...
+                  </p>
+                </div>
+              ) : externalResults.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    {externalResults.length} resultados encontrados. Selecciona uno para añadirlo a la biblioteca.
+                  </p>
+                  {externalResults.map((book, index) => (
+                    <ExternalBookCard key={`${book.isbn13 || book.title}-${index}`} book={book} />
+                  ))}
+                </div>
+              ) : debouncedQuery.trim() ? (
+                <Card className="p-8 text-center shadow-card">
+                  <Globe className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                  <h3 className="font-semibold text-foreground mb-2">
+                    No se encontraron resultados
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Intenta con otros términos de búsqueda
+                  </p>
+                </Card>
+              ) : (
+                <Card className="p-8 text-center shadow-card">
+                  <Globe className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                  <h3 className="font-semibold text-foreground mb-2">
+                    Buscar libros en la web
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Escribe un título o autor para buscar en Google Books y OpenLibrary
+                  </p>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {/* Genres (only when not searching) */}
+        {!searchQuery.trim() && (
+          <>
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-accent" />
+                  <h2 className="text-lg font-semibold text-foreground">Explorar géneros</h2>
+                </div>
+                {selectedGenres.length > 0 && (
+                  <button
+                    onClick={clearGenres}
+                    className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <X className="w-4 h-4" />
+                    Limpiar ({selectedGenres.length})
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {genres.map((genre) => {
+                  const isSelected = selectedGenres.includes(genre);
+                  return (
+                    <button
+                      key={genre}
+                      onClick={() => toggleGenre(genre)}
+                      className={`px-4 py-2 rounded-full tab-transition ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted hover:bg-primary/20 text-foreground"
+                      }`}
+                    >
+                      {genre}
+                      {isSelected && (
+                        <X className="w-3 h-3 ml-1 inline-block" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Books List */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">
+                  {selectedGenres.length > 0 
+                    ? `Libros de ${selectedGenres.join(" + ")}`
+                    : "Todos los libros"}
+                </h2>
+              </div>
+
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : displayBooks.length > 0 ? (
+                <div className="space-y-3">
+                  {displayBooks.map((book) => {
+                    const userData = getUserBookData(book.id);
+                    return (
+                      <BookCard
+                        key={book.id}
+                        book={book}
+                        userStatus={userData.status}
+                        userRating={userData.rating}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card className="p-8 text-center shadow-card">
+                  <SearchIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                  <h3 className="font-semibold text-foreground mb-2">
+                    No se encontraron libros
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedGenres.length > 0
+                      ? "No hay libros que coincidan con todos los géneros seleccionados"
+                      : "No hay libros disponibles en este momento"}
+                  </p>
+                </Card>
+              )}
+            </section>
+          </>
+        )}
       </main>
     </div>
   );
