@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface RatingControlProps {
@@ -34,12 +35,30 @@ export const RatingControl = ({
   size = "md" 
 }: RatingControlProps) => {
   const [localValue, setLocalValue] = useState<number>(value ?? 5);
-  const displayValue = value ?? localValue;
+  const [hasChanged, setHasChanged] = useState(false);
 
-  const handleChange = (newValue: number[]) => {
+  // Sync with external value when it changes
+  useEffect(() => {
+    if (value !== null) {
+      setLocalValue(value);
+    }
+  }, [value]);
+
+  const handleSliderChange = (newValue: number[]) => {
     const rating = newValue[0];
     setLocalValue(rating);
-    onChange(rating);
+    setHasChanged(true);
+  };
+
+  const handleConfirm = () => {
+    onChange(localValue);
+    setHasChanged(false);
+  };
+
+  const handleClear = () => {
+    onChange(null);
+    setLocalValue(5);
+    setHasChanged(false);
   };
 
   const sizeClasses = {
@@ -49,24 +68,32 @@ export const RatingControl = ({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* Current saved rating indicator */}
+      {value !== null && (
+        <div className="text-center text-sm text-muted-foreground">
+          Puntuación actual: <span className="font-semibold text-foreground">{value}/10</span>
+        </div>
+      )}
+
+      {/* Display value */}
       <div className="flex items-center justify-center gap-2">
-        <span className={cn("font-bold", sizeClasses[size], getRatingColor(displayValue))}>
-          {displayValue.toFixed(1)}
+        <span className={cn("font-bold tabular-nums", sizeClasses[size], getRatingColor(localValue))}>
+          {localValue.toFixed(1)}
         </span>
         <span className="text-muted-foreground">/10</span>
       </div>
       
       <p className={cn(
         "text-center font-medium",
-        getRatingColor(displayValue)
+        getRatingColor(localValue)
       )}>
-        {getRatingLabel(displayValue)}
+        {getRatingLabel(localValue)}
       </p>
 
       <Slider
-        value={[displayValue]}
-        onValueChange={handleChange}
+        value={[localValue]}
+        onValueChange={handleSliderChange}
         min={1}
         max={10}
         step={0.5}
@@ -80,14 +107,28 @@ export const RatingControl = ({
         <span>10</span>
       </div>
 
-      {value === null && (
-        <button
-          onClick={() => onChange(null)}
-          className="text-xs text-muted-foreground hover:text-foreground underline mx-auto block"
+      {/* Action buttons */}
+      <div className="flex gap-2 pt-2">
+        {value !== null && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClear}
+            disabled={disabled}
+            className="flex-1"
+          >
+            Quitar puntuación
+          </Button>
+        )}
+        <Button
+          size="sm"
+          onClick={handleConfirm}
+          disabled={disabled || (!hasChanged && value === localValue)}
+          className="flex-1"
         >
-          Quitar puntuación
-        </button>
-      )}
+          {value === null ? "Guardar puntuación" : "Actualizar"}
+        </Button>
+      </div>
     </div>
   );
 };

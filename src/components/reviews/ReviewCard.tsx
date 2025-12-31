@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { Review } from "@/hooks/useReviews";
 import { useVoteReview } from "@/hooks/useReviews";
 import { useAuth } from "@/contexts/AuthContext";
+import { ReviewComments } from "./ReviewComments";
 
 interface ReviewCardProps {
   review: Review;
@@ -163,6 +164,9 @@ export const ReviewCard = ({ review, showBookInfo = false }: ReviewCardProps) =>
           </span>
         )}
       </div>
+
+      {/* Comments section */}
+      <ReviewComments reviewId={review.id} />
     </Card>
   );
 };
