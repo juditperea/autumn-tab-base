@@ -48,7 +48,7 @@ const GENRES = [
 
 // Year ranges
 const YEAR_RANGES = [
-  { label: "Cualquier año", value: "" },
+  { label: "Cualquier año", value: "all" },
   { label: "2020 - Presente", value: "2020-2030" },
   { label: "2010 - 2019", value: "2010-2019" },
   { label: "2000 - 2009", value: "2000-2009" },
@@ -58,7 +58,7 @@ const YEAR_RANGES = [
 
 // Languages
 const LANGUAGES = [
-  { label: "Todos los idiomas", value: "" },
+  { label: "Todos los idiomas", value: "all" },
   { label: "Español", value: "es" },
   { label: "Inglés", value: "en" },
   { label: "Francés", value: "fr" },
@@ -106,7 +106,7 @@ const Search = () => {
   // Filter results by year and language (client-side)
   const filteredResults = results.filter(book => {
     // Filter by year
-    if (yearRange) {
+    if (yearRange && yearRange !== "all") {
       const [minYear, maxYear] = yearRange.split("-").map(Number);
       if (!book.published_year || book.published_year < minYear || book.published_year > maxYear) {
         return false;
@@ -114,7 +114,7 @@ const Search = () => {
     }
     
     // Filter by language
-    if (language && book.language !== language) {
+    if (language && language !== "all" && book.language !== language) {
       return false;
     }
     
@@ -132,7 +132,7 @@ const Search = () => {
     setLanguage("");
   };
 
-  const hasActiveFilters = authorFilter || selectedGenre || yearRange || language;
+  const hasActiveFilters = authorFilter || selectedGenre || (yearRange && yearRange !== "all") || (language && language !== "all");
 
   return (
     <div className="min-h-screen pb-20 bg-background">
@@ -212,12 +212,12 @@ const Search = () => {
                   <Tag className="w-4 h-4 text-primary" />
                   Género
                 </label>
-                <Select value={selectedGenre} onValueChange={setSelectedGenre}>
+                <Select value={selectedGenre || "all"} onValueChange={(v) => setSelectedGenre(v === "all" ? "" : v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar género" />
+                    <SelectValue placeholder="Todos los géneros" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos los géneros</SelectItem>
+                    <SelectItem value="all">Todos los géneros</SelectItem>
                     {GENRES.map((genre) => (
                       <SelectItem key={genre} value={genre}>
                         {genre}
