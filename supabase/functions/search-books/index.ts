@@ -41,12 +41,17 @@ async function searchGoogleBooks(params: SearchParams): Promise<BookResult[]> {
     
     // Add author filter to query
     if (params.author) {
-      searchQuery += ` inauthor:${params.author}`;
+      searchQuery += (searchQuery ? " " : "") + `inauthor:${params.author}`;
     }
     
     // Add genre/subject filter
     if (params.genre) {
-      searchQuery += ` subject:${params.genre}`;
+      searchQuery += (searchQuery ? " " : "") + `subject:${params.genre}`;
+    }
+    
+    // If still no query, use a broad search
+    if (!searchQuery.trim()) {
+      return [];
     }
     
     // Build URL with language restriction if provided
@@ -103,12 +108,17 @@ async function searchOpenLibrary(params: SearchParams): Promise<BookResult[]> {
     
     // Add author to query for OpenLibrary
     if (params.author) {
-      searchQuery += ` author:${params.author}`;
+      searchQuery += (searchQuery ? " " : "") + `author:${params.author}`;
     }
     
     // Add subject for genre
     if (params.genre) {
-      searchQuery += ` subject:${params.genre}`;
+      searchQuery += (searchQuery ? " " : "") + `subject:${params.genre}`;
+    }
+    
+    // If still no query, skip this API (OpenLibrary requires a query)
+    if (!searchQuery.trim()) {
+      return [];
     }
     
     let url = `https://openlibrary.org/search.json?q=${encodeURIComponent(searchQuery)}&limit=20`;
@@ -444,9 +454,12 @@ serve(async (req) => {
     
     console.log("Search params:", params);
     
-    if (!params.query && !params.isbn) {
+    // Allow search with just filters (author, genre, language) even without a title query
+    const hasSearchCriteria = params.query || params.isbn || params.author || params.genre;
+    
+    if (!hasSearchCriteria) {
       return new Response(
-        JSON.stringify({ error: "Query or ISBN is required" }),
+        JSON.stringify({ error: "Se requiere al menos un criterio de búsqueda (título, autor o género)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
