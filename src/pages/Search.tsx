@@ -31,25 +31,25 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// Common genres for filtering
+// Common genres for filtering (Spanish labels, English values for API)
 const GENRES = [
-  "Fiction",
-  "Fantasy",
-  "Romance",
-  "Mystery",
-  "Science Fiction",
-  "Thriller",
-  "Biography",
-  "History",
-  "Self-Help",
-  "Children",
-  "Young Adult",
-  "Horror",
-  "Poetry",
-  "Philosophy",
-  "Art",
-  "Cooking",
-  "Travel",
+  { label: "Ficción", value: "Fiction" },
+  { label: "Fantasía", value: "Fantasy" },
+  { label: "Romance", value: "Romance" },
+  { label: "Misterio", value: "Mystery" },
+  { label: "Ciencia Ficción", value: "Science Fiction" },
+  { label: "Thriller", value: "Thriller" },
+  { label: "Biografía", value: "Biography" },
+  { label: "Historia", value: "History" },
+  { label: "Autoayuda", value: "Self-Help" },
+  { label: "Infantil", value: "Children" },
+  { label: "Juvenil", value: "Young Adult" },
+  { label: "Terror", value: "Horror" },
+  { label: "Poesía", value: "Poetry" },
+  { label: "Filosofía", value: "Philosophy" },
+  { label: "Arte", value: "Art" },
+  { label: "Cocina", value: "Cooking" },
+  { label: "Viajes", value: "Travel" },
 ];
 
 // Year ranges
@@ -107,10 +107,13 @@ const Search = () => {
     };
   }, [debouncedAuthor, selectedGenre, yearRange, language]);
 
+  // Check if any filter is active
+  const hasSearchCriteria = debouncedQuery.trim() || debouncedAuthor.trim() || selectedGenre || language !== "all";
+
   // Trigger search when query or filters change
   useEffect(() => {
-    if (debouncedQuery.trim()) {
-      search(debouncedQuery, getFilters());
+    if (hasSearchCriteria) {
+      search(debouncedQuery || "", getFilters());
     } else {
       clearResults();
     }
@@ -222,8 +225,8 @@ const Search = () => {
                   <SelectContent>
                     <SelectItem value="all">Todos los géneros</SelectItem>
                     {GENRES.map((genre) => (
-                      <SelectItem key={genre} value={genre}>
-                        {genre}
+                      <SelectItem key={genre.value} value={genre.value}>
+                        {genre.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -303,7 +306,7 @@ const Search = () => {
               ))}
             </div>
           </div>
-        ) : debouncedQuery.trim() ? (
+        ) : hasSearchCriteria ? (
           <Card className="p-8 text-center shadow-card">
             <SearchIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
             <h3 className="font-semibold text-foreground mb-2">
