@@ -18,6 +18,8 @@ interface BookResult {
   published_year: number | null;
   source: string;
   relevance_score?: number;
+  popularity_score?: number;
+  found_in_both?: boolean;
 }
 
 interface SearchParams {
@@ -39,25 +41,35 @@ async function searchGoogleBooks(params: SearchParams): Promise<BookResult[]> {
   try {
     let searchQuery = params.query || "";
     
-    // Add author filter to query
+    // Add author filter to query using intitle: if we have a query, otherwise just author
     if (params.author) {
       searchQuery += (searchQuery ? " " : "") + `inauthor:${params.author}`;
     }
     
-    // Add genre/subject filter
+    // Add genre/subject filter - Google doesn't have strict subject filter, 
+    // so we add it as a term in the query
     if (params.genre) {
       searchQuery += (searchQuery ? " " : "") + `subject:${params.genre}`;
     }
     
-    // If still no query, use a broad search
+    // If no query but we have language filter, use a broad term to get results
     if (!searchQuery.trim()) {
-      return [];
+      if (params.language && params.language !== "all") {
+        // Use a common search term based on language to get popular books
+        const langTerms: Record<string, string> = {
+          "es": "literatura novela", "en": "novel fiction", "fr": "roman litterature",
+          "de": "roman literatur", "pt": "romance literatura", "it": "romanzo letteratura"
+        };
+        searchQuery = langTerms[params.language] || "fiction";
+      } else {
+        return [];
+      }
     }
     
-    // Build URL with language restriction if provided
-    let url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=20`;
+    // Build URL with language restriction if provided - request more results to filter later
+    let url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=30&orderBy=relevance`;
     
-    // Apply language restriction if user has a preferred language
+    // Apply strict language restriction if user has specified a language
     if (params.language && params.language !== "all") {
       url += `&langRestrict=${params.language}`;
     } else if (params.userLanguage) {
@@ -116,17 +128,30 @@ async function searchOpenLibrary(params: SearchParams): Promise<BookResult[]> {
       searchQuery += (searchQuery ? " " : "") + `subject:${params.genre}`;
     }
     
-    // If still no query, skip this API (OpenLibrary requires a query)
+    // Add language filter directly in query for better filtering
+    // OpenLibrary uses ISO 639-2/3 language codes (spa, eng, fre, etc.)
+    if (params.language && params.language !== "all") {
+      const langMap: Record<string, string> = {
+        "es": "spa", "en": "eng", "fr": "fre", "de": "ger", 
+        "pt": "por", "it": "ita", "ca": "cat"
+      };
+      const olLangCode = langMap[params.language] || params.language;
+      searchQuery += (searchQuery ? " " : "") + `language:${olLangCode}`;
+    }
+    
+    // Add year range filter if specified
+    if (params.yearMin !== undefined && params.yearMax !== undefined) {
+      searchQuery += (searchQuery ? " " : "") + `first_publish_year:[${params.yearMin} TO ${params.yearMax}]`;
+    }
+    
+    // If still no query, try with a broad term
     if (!searchQuery.trim()) {
+      // OpenLibrary requires some query, so we skip if truly empty
       return [];
     }
     
-    let url = `https://openlibrary.org/search.json?q=${encodeURIComponent(searchQuery)}&limit=20`;
-    
-    // Add language filter if specified
-    if (params.language && params.language !== "all") {
-      url += `&language=${params.language}`;
-    }
+    // Use fields parameter to get more complete data
+    let url = `https://openlibrary.org/search.json?q=${encodeURIComponent(searchQuery)}&limit=25&fields=key,title,author_name,first_sentence,cover_i,isbn,subject,language,number_of_pages_median,first_publish_year,ratings_count,readinglog_count`;
     
     console.log("OpenLibrary URL:", url);
     const response = await fetch(url);
@@ -144,6 +169,10 @@ async function searchOpenLibrary(params: SearchParams): Promise<BookResult[]> {
       const coverId = doc.cover_i;
       const languages = doc.language || [];
       
+      // Use popularity metrics for later scoring
+      const ratingsCount = doc.ratings_count || 0;
+      const readinglogCount = doc.readinglog_count || 0;
+      
       return {
         title: doc.title || "",
         authors: doc.author_name || [],
@@ -158,6 +187,8 @@ async function searchOpenLibrary(params: SearchParams): Promise<BookResult[]> {
         page_count: doc.number_of_pages_median || null,
         published_year: doc.first_publish_year || null,
         source: "open_library",
+        // Add popularity data for relevance scoring
+        popularity_score: ratingsCount + (readinglogCount * 0.1),
       };
     });
   } catch (error) {
@@ -282,7 +313,7 @@ function mergeBooks(book1: BookResult, book2: BookResult): BookResult {
   };
 }
 
-// Deduplicate and merge results
+// Deduplicate and merge results - prioritizing books found in both sources
 function deduplicateAndMerge(results: BookResult[]): BookResult[] {
   const uniqueBooks: BookResult[] = [];
   
@@ -291,15 +322,19 @@ function deduplicateAndMerge(results: BookResult[]): BookResult[] {
     
     for (let i = 0; i < uniqueBooks.length; i++) {
       if (areDuplicates(uniqueBooks[i], book)) {
-        // Merge the books
-        uniqueBooks[i] = mergeBooks(uniqueBooks[i], book);
+        // Mark as found in both sources (more relevant)
+        const merged = mergeBooks(uniqueBooks[i], book);
+        merged.found_in_both = true;
+        // Combine popularity scores
+        merged.popularity_score = (uniqueBooks[i].popularity_score || 0) + (book.popularity_score || 0);
+        uniqueBooks[i] = merged;
         foundDuplicate = true;
         break;
       }
     }
     
     if (!foundDuplicate) {
-      uniqueBooks.push(book);
+      uniqueBooks.push({ ...book, found_in_both: false });
     }
   }
   
@@ -318,18 +353,25 @@ function calculateRelevanceScore(
 ): number {
   let score = 0;
   
+  // ---- BONUS: Found in both sources (very relevant) - 25 points ----
+  if (book.found_in_both) {
+    score += 25;
+  }
+  
   // ---- Title match (0-30 points) ----
   const normalizedQuery = normalizeString(searchQuery);
   const normalizedTitle = normalizeString(book.title);
   
-  if (normalizedTitle === normalizedQuery) {
-    score += 30; // Exact match
-  } else if (normalizedTitle.includes(normalizedQuery)) {
-    score += 25; // Contains query
-  } else if (normalizedTitle.startsWith(normalizedQuery.split(" ")[0])) {
-    score += 20; // Starts with first word
-  } else {
-    score += stringSimilarity(normalizedTitle, normalizedQuery) * 20;
+  if (normalizedQuery) {
+    if (normalizedTitle === normalizedQuery) {
+      score += 30; // Exact match
+    } else if (normalizedTitle.includes(normalizedQuery)) {
+      score += 25; // Contains query
+    } else if (normalizedTitle.startsWith(normalizedQuery.split(" ")[0])) {
+      score += 20; // Starts with first word
+    } else {
+      score += stringSimilarity(normalizedTitle, normalizedQuery) * 20;
+    }
   }
   
   // ---- Author match (0-15 points) ----
@@ -349,7 +391,13 @@ function calculateRelevanceScore(
   
   // ---- Language preference (0-20 points) ----
   if (userLanguage && book.language) {
-    const bookLang = book.language.toLowerCase().substring(0, 2);
+    // Normalize language codes
+    const langMap: Record<string, string> = {
+      "spa": "es", "eng": "en", "fre": "fr", "ger": "de", 
+      "por": "pt", "ita": "it", "cat": "ca"
+    };
+    let bookLang = book.language.toLowerCase().substring(0, 3);
+    bookLang = langMap[bookLang] || bookLang.substring(0, 2);
     const userLang = userLanguage.toLowerCase().substring(0, 2);
     
     if (bookLang === userLang) {
@@ -362,6 +410,13 @@ function calculateRelevanceScore(
   // ---- Cover image (0-10 points) ----
   if (book.cover_url) {
     score += 10;
+  }
+  
+  // ---- Popularity bonus (0-15 points) ----
+  if (book.popularity_score) {
+    // Log scale for popularity to prevent huge scores from dominating
+    const popBonus = Math.min(15, Math.log10(book.popularity_score + 1) * 5);
+    score += popBonus;
   }
   
   // ---- Metadata completeness (0-15 points) ----
@@ -379,6 +434,13 @@ function calculateRelevanceScore(
         score += 10;
         break;
       }
+    }
+  }
+  
+  // ---- Year match (0-5 points) ----
+  if (params.yearMin !== undefined && params.yearMax !== undefined && book.published_year) {
+    if (book.published_year >= params.yearMin && book.published_year <= params.yearMax) {
+      score += 5;
     }
   }
   
@@ -454,12 +516,14 @@ serve(async (req) => {
     
     console.log("Search params:", params);
     
-    // Allow search with just filters (author, genre, language) even without a title query
-    const hasSearchCriteria = params.query || params.isbn || params.author || params.genre;
+    // Allow search with just filters (author, genre, language, year) even without a title query
+    const hasSearchCriteria = params.query || params.isbn || params.author || params.genre || 
+                              (params.yearMin !== undefined && params.yearMax !== undefined) ||
+                              (params.language && params.language !== "all");
     
     if (!hasSearchCriteria) {
       return new Response(
-        JSON.stringify({ error: "Se requiere al menos un criterio de búsqueda (título, autor o género)" }),
+        JSON.stringify({ error: "Se requiere al menos un criterio de búsqueda" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

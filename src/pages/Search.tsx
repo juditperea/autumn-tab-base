@@ -107,8 +107,8 @@ const Search = () => {
     };
   }, [debouncedAuthor, selectedGenre, yearRange, language]);
 
-  // Check if any filter is active
-  const hasSearchCriteria = debouncedQuery.trim() || debouncedAuthor.trim() || selectedGenre || language !== "all";
+  // Check if any filter is active (including yearRange)
+  const hasSearchCriteria = debouncedQuery.trim() || debouncedAuthor.trim() || selectedGenre || yearRange !== "all" || language !== "all";
 
   // Trigger search when query or filters change
   useEffect(() => {

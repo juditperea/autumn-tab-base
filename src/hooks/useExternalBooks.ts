@@ -53,7 +53,11 @@ export const useExternalBookSearch = () => {
   const [meta, setMeta] = useState<SearchResult["meta"] | null>(null);
 
   const search = async (query: string, filters?: SearchFilters) => {
-    if (!query.trim()) {
+    // Allow search with just filters (no query required)
+    const hasAnyCriteria = query.trim() || filters?.author || filters?.genre || 
+                           filters?.language || (filters?.yearMin !== undefined && filters?.yearMax !== undefined);
+    
+    if (!hasAnyCriteria) {
       setResults([]);
       setMeta(null);
       return;
@@ -65,7 +69,7 @@ export const useExternalBookSearch = () => {
     try {
       const { data, error: fnError } = await supabase.functions.invoke<SearchResult>("search-books", {
         body: { 
-          query,
+          query: query.trim() || undefined, // Don't send empty string, let backend know there's no title
           author: filters?.author,
           genre: filters?.genre,
           yearMin: filters?.yearMin,
