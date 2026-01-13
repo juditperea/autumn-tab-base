@@ -2,41 +2,12 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Search, Star, TrendingUp, Award, Library, Sparkles } from "lucide-react";
+import { BookOpen, Search, Library, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserBooks } from "@/hooks/useUserBooks";
-
-// Curated book collections - each links to a real search with author/title that will return results
-const CURATED_COLLECTIONS = [
-  {
-    id: "classics",
-    title: "Clásicos modernos",
-    icon: Star,
-    description: "Obras atemporales que definieron la literatura",
-    color: "text-accent",
-    // Search for well-known classic authors
-    searchParams: "?author=Gabriel García Márquez",
-  },
-  {
-    id: "popular",
-    title: "Los más leídos",
-    icon: TrendingUp,
-    description: "Libros populares en todo el mundo",
-    color: "text-primary",
-    // Search for bestselling authors
-    searchParams: "?author=Stephen King",
-  },
-  {
-    id: "awards",
-    title: "Premios literarios",
-    icon: Award,
-    description: "Ganadores de premios internacionales",
-    color: "text-secondary",
-    // Search for Nobel/Pulitzer winners
-    searchParams: "?author=Isabel Allende",
-  },
-];
+import { useAllCuratedCollections } from "@/hooks/useCuratedCollections";
+import { CuratedCollectionSection } from "@/components/books/CuratedCollectionSection";
 
 // Quick action genres - MUST match the GENRES in Search.tsx
 const QUICK_ACTIONS = [
@@ -50,9 +21,17 @@ const QUICK_ACTIONS = [
   { label: "Terror", genre: "Horror" },
 ];
 
+// Icon mapping for collections
+const COLLECTION_ICONS: Record<string, "star" | "trending" | "award"> = {
+  classics: "star",
+  popular: "trending",
+  awards: "award",
+};
+
 const Feed = () => {
   const { user } = useAuth();
   const { data: userBooks } = useUserBooks();
+  const { data: curatedCollections, isLoading: isLoadingCollections } = useAllCuratedCollections();
   
   // Count books by status
   const readingCount = userBooks?.filter(b => b.status === "reading").length || 0;
@@ -144,33 +123,44 @@ const Feed = () => {
           </div>
         </div>
 
-        {/* Curated Collections */}
-        <div className="space-y-3">
-          <h2 className="font-semibold text-foreground flex items-center gap-2">
-            <Star className="w-5 h-5 text-accent" />
-            Descubre
-          </h2>
-          
-          {CURATED_COLLECTIONS.map((collection) => (
-            <Link key={collection.id} to={`/buscar${collection.searchParams}`}>
-              <Card className="p-4 shadow-card hover:shadow-warm transition-shadow cursor-pointer group">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors`}>
-                    <collection.icon className={`w-5 h-5 ${collection.color}`} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-foreground group-hover:text-primary transition-colors">
-                      {collection.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {collection.description}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        {/* Curated Collections with real books */}
+        {curatedCollections?.map((collection) => (
+          <CuratedCollectionSection
+            key={collection.id}
+            title={collection.title}
+            description={collection.description}
+            books={collection.books}
+            isLoading={isLoadingCollections}
+            icon={COLLECTION_ICONS[collection.id] || "star"}
+          />
+        ))}
+
+        {/* Loading state for collections */}
+        {isLoadingCollections && !curatedCollections && (
+          <>
+            <CuratedCollectionSection
+              title="Clásicos modernos"
+              description="Obras atemporales que definieron la literatura"
+              books={[]}
+              isLoading={true}
+              icon="star"
+            />
+            <CuratedCollectionSection
+              title="Los más leídos"
+              description="Libros populares en todo el mundo"
+              books={[]}
+              isLoading={true}
+              icon="trending"
+            />
+            <CuratedCollectionSection
+              title="Premios literarios"
+              description="Ganadores de premios internacionales"
+              books={[]}
+              isLoading={true}
+              icon="award"
+            />
+          </>
+        )}
 
         {/* CTA to search */}
         <Card className="p-6 text-center shadow-card bg-muted/30">
