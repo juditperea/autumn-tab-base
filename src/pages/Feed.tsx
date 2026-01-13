@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserBooks } from "@/hooks/useUserBooks";
 
-// Curated book collections for discovery (using well-known ISBNs)
+// Curated book collections - each links to a real search with author/title that will return results
 const CURATED_COLLECTIONS = [
   {
     id: "classics",
@@ -15,6 +15,8 @@ const CURATED_COLLECTIONS = [
     icon: Star,
     description: "Obras atemporales que definieron la literatura",
     color: "text-accent",
+    // Search for well-known classic authors
+    searchParams: "?author=Gabriel García Márquez",
   },
   {
     id: "popular",
@@ -22,6 +24,8 @@ const CURATED_COLLECTIONS = [
     icon: TrendingUp,
     description: "Libros populares en todo el mundo",
     color: "text-primary",
+    // Search for bestselling authors
+    searchParams: "?author=Stephen King",
   },
   {
     id: "awards",
@@ -29,16 +33,21 @@ const CURATED_COLLECTIONS = [
     icon: Award,
     description: "Ganadores de premios internacionales",
     color: "text-secondary",
+    // Search for Nobel/Pulitzer winners
+    searchParams: "?author=Isabel Allende",
   },
 ];
 
-// Quick action buttons for the user
+// Quick action genres - MUST match the GENRES in Search.tsx
 const QUICK_ACTIONS = [
   { label: "Ficción", genre: "Fiction" },
   { label: "Fantasía", genre: "Fantasy" },
-  { label: "Historia", genre: "History" },
+  { label: "Romance", genre: "Romance" },
   { label: "Misterio", genre: "Mystery" },
-  { label: "Ciencia", genre: "Science" },
+  { label: "Ciencia Ficción", genre: "Science Fiction" },
+  { label: "Biografía", genre: "Biography" },
+  { label: "Historia", genre: "History" },
+  { label: "Terror", genre: "Horror" },
 ];
 
 const Feed = () => {
@@ -143,7 +152,7 @@ const Feed = () => {
           </h2>
           
           {CURATED_COLLECTIONS.map((collection) => (
-            <Link key={collection.id} to={`/buscar?collection=${collection.id}`}>
+            <Link key={collection.id} to={`/buscar${collection.searchParams}`}>
               <Card className="p-4 shadow-card hover:shadow-warm transition-shadow cursor-pointer group">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors`}>

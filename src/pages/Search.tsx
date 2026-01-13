@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -76,12 +77,18 @@ const LANGUAGES = [
 ];
 
 const Search = () => {
+  const [searchParams] = useSearchParams();
+  
+  // Initialize state from URL params
+  const initialGenre = searchParams.get("genre") || "";
+  const initialAuthor = searchParams.get("author") || "";
+  
   const [searchQuery, setSearchQuery] = useState("");
-  const [authorFilter, setAuthorFilter] = useState("");
-  const [selectedGenre, setSelectedGenre] = useState("");
+  const [authorFilter, setAuthorFilter] = useState(initialAuthor);
+  const [selectedGenre, setSelectedGenre] = useState(initialGenre);
   const [yearRange, setYearRange] = useState("all");
   const [language, setLanguage] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(!!initialAuthor || !!initialGenre);
   
   const debouncedQuery = useDebounce(searchQuery, 400);
   const debouncedAuthor = useDebounce(authorFilter, 400);
