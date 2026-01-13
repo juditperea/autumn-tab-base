@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
@@ -40,6 +40,7 @@ export const BookCard = ({
   compact = false,
   showQuickRating = true,
 }: BookCardProps) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const updateUserBook = useUpdateUserBook();
@@ -117,25 +118,37 @@ export const BookCard = ({
   }
 
   return (
-    <Card className="p-4 shadow-card hover:shadow-warm tab-transition">
+    <Card 
+      className="p-4 shadow-card hover:shadow-warm tab-transition cursor-pointer"
+      onClick={(e) => {
+        // Don't navigate if clicking on interactive elements
+        const target = e.target as HTMLElement;
+        if (
+          target.closest('button') || 
+          target.closest('[role="button"]') ||
+          target.closest('[data-interactive="true"]')
+        ) {
+          return;
+        }
+        navigate(`/libro/${book.id}`);
+      }}
+    >
       <div className="flex gap-4">
-        <Link to={`/libro/${book.id}`} className="flex-shrink-0">
+        <div className="flex-shrink-0">
           {book.cover_url ? (
             <img
               src={book.cover_url}
               alt={book.title}
-              className="w-20 h-28 rounded-lg object-cover cursor-pointer"
+              className="w-20 h-28 rounded-lg object-cover"
             />
           ) : (
-            <div className="w-20 h-28 rounded-lg gradient-autumn cursor-pointer" />
+            <div className="w-20 h-28 rounded-lg gradient-autumn" />
           )}
-        </Link>
+        </div>
         <div className="flex-1 min-w-0">
-          <Link to={`/libro/${book.id}`}>
-            <h3 className="font-semibold text-foreground mb-1 line-clamp-2 hover:text-primary transition-colors cursor-pointer">
-              {book.title}
-            </h3>
-          </Link>
+          <h3 className="font-semibold text-foreground mb-1 line-clamp-2 hover:text-primary transition-colors">
+            {book.title}
+          </h3>
           <p className="text-sm text-muted-foreground mb-2">
             {book.authors.join(", ")}
           </p>
@@ -172,7 +185,7 @@ export const BookCard = ({
 
           {/* Quick Rating - always show for logged in users */}
           {showQuickRating && user && (
-            <div className="mt-2 pt-2 border-t border-border">
+            <div className="mt-2 pt-2 border-t border-border" data-interactive="true">
               <QuickRating
                 bookId={book.id}
                 currentRating={effectiveUserRating}
