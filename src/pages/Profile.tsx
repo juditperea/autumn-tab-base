@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, BookOpen, Target, Award, LogOut } from "lucide-react";
+import { Settings, BookOpen, Target, Award, LogOut, Clock, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { BookShelf } from "@/components/books/BookShelf";
 import { useUserBooksStats } from "@/hooks/useUserBooks";
 import { useUserReviews } from "@/hooks/useReviews";
+import { RecentActivity } from "@/components/profile/RecentActivity";
+import { UserReviewsList } from "@/components/profile/UserReviewsList";
 
 interface Profile {
   username: string;
@@ -103,7 +105,7 @@ const Profile = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border shadow-card">
         <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
-          <h1 className="text-xl font-bold text-foreground">Perfil</h1>
+          <h1 className="text-xl font-bold text-foreground">Mi espacio lector</h1>
           <div className="flex items-center gap-2">
             <Button size="icon" variant="ghost" className="rounded-full" onClick={handleSignOut}>
               <LogOut className="w-5 h-5" />
@@ -155,9 +157,28 @@ const Profile = () => {
           ))}
         </section>
 
+        {/* Recent Activity */}
+        <section>
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-primary" />
+            Tu actividad reciente
+          </h3>
+          <RecentActivity limit={5} />
+        </section>
+
+        {/* User's Reviews */}
+        <section>
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-primary" />
+            Tus reseñas
+          </h3>
+          <UserReviewsList limit={3} />
+        </section>
+
         {/* My Books */}
         <section>
-          <h3 className="text-lg font-semibold text-foreground mb-4">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-primary" />
             Mi biblioteca
           </h3>
           <BookShelf />
