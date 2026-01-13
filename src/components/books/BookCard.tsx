@@ -4,12 +4,18 @@ import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import type { Book } from "@/hooks/useBooks";
 import type { ReadingStatus } from "@/hooks/useUserBooks";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserBookForBook, useUpdateUserBook, useAddToShelf } from "@/hooks/useUserBooks";
+import { QuickRating } from "./QuickRating";
+import { useToast } from "@/hooks/use-toast";
 
 interface BookCardProps {
   book: Book;
   userStatus?: ReadingStatus | null;
   userRating?: number | null;
+  userBookId?: string;
   compact?: boolean;
+  showQuickRating?: boolean;
 }
 
 const statusLabels: Record<ReadingStatus, string> = {
@@ -26,7 +32,58 @@ const statusColors: Record<ReadingStatus, string> = {
   dnf: "bg-muted text-muted-foreground",
 };
 
-export const BookCard = ({ book, userStatus, userRating, compact = false }: BookCardProps) => {
+export const BookCard = ({ 
+  book, 
+  userStatus, 
+  userRating, 
+  userBookId,
+  compact = false,
+  showQuickRating = true,
+}: BookCardProps) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const updateUserBook = useUpdateUserBook();
+  const addToShelf = useAddToShelf();
+  
+  // If we have a userBookId, we can use it directly
+  // Otherwise, we need to fetch the user's book data
+  const { data: fetchedUserBook } = useUserBookForBook(
+    showQuickRating && user && !userBookId ? book.id : undefined
+  );
+  
+  const effectiveUserBookId = userBookId || fetchedUserBook?.id;
+  const effectiveUserRating = userRating ?? fetchedUserBook?.rating ?? null;
+
+  const handleQuickRate = async (rating: number) => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Debes iniciar sesión para puntuar libros",
+      });
+      return;
+    }
+
+    try {
+      if (effectiveUserBookId) {
+        // Update existing user book
+        await updateUserBook.mutateAsync({ id: effectiveUserBookId, rating });
+      } else {
+        // Add to shelf with rating (status: read by default when rating)
+        await addToShelf.mutateAsync({ bookId: book.id, status: "read", rating });
+      }
+      toast({
+        title: "Puntuación guardada",
+        description: `Has puntuado "${book.title}" con ${rating}/10`,
+      });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo guardar la puntuación",
+      });
+    }
+  };
+
   if (compact) {
     return (
       <Link to={`/libro/${book.id}`}>
@@ -60,63 +117,80 @@ export const BookCard = ({ book, userStatus, userRating, compact = false }: Book
   }
 
   return (
-    <Link to={`/libro/${book.id}`}>
-      <Card className="p-4 shadow-card hover:shadow-warm tab-transition cursor-pointer">
-        <div className="flex gap-4">
+    <Card className="p-4 shadow-card hover:shadow-warm tab-transition">
+      <div className="flex gap-4">
+        <Link to={`/libro/${book.id}`} className="flex-shrink-0">
           {book.cover_url ? (
             <img
               src={book.cover_url}
               alt={book.title}
-              className="w-20 h-28 rounded-lg object-cover flex-shrink-0"
+              className="w-20 h-28 rounded-lg object-cover cursor-pointer"
             />
           ) : (
-            <div className="w-20 h-28 rounded-lg gradient-autumn flex-shrink-0" />
+            <div className="w-20 h-28 rounded-lg gradient-autumn cursor-pointer" />
           )}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground mb-1 line-clamp-2">{book.title}</h3>
-            <p className="text-sm text-muted-foreground mb-2">
-              {book.authors.join(", ")}
-            </p>
-            
-            <div className="flex flex-wrap gap-2 mb-2">
-              {book.genres.slice(0, 2).map((genre) => (
-                <Badge key={genre} variant="secondary" className="text-xs">
-                  {genre}
-                </Badge>
-              ))}
-            </div>
+        </Link>
+        <div className="flex-1 min-w-0">
+          <Link to={`/libro/${book.id}`}>
+            <h3 className="font-semibold text-foreground mb-1 line-clamp-2 hover:text-primary transition-colors cursor-pointer">
+              {book.title}
+            </h3>
+          </Link>
+          <p className="text-sm text-muted-foreground mb-2">
+            {book.authors.join(", ")}
+          </p>
+          
+          <div className="flex flex-wrap gap-2 mb-2">
+            {book.genres.slice(0, 2).map((genre) => (
+              <Badge key={genre} variant="secondary" className="text-xs">
+                {genre}
+              </Badge>
+            ))}
+          </div>
 
-            <div className="flex items-center justify-between">
-              {book.average_rating > 0 ? (
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-accent text-accent" />
-                  <span className="text-sm font-medium text-foreground">
-                    {book.average_rating.toFixed(1)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    ({book.ratings_count})
-                  </span>
-                </div>
-              ) : (
-                <span className="text-xs text-muted-foreground">Sin puntuaciones</span>
-              )}
-
-              {userStatus && (
-                <Badge className={statusColors[userStatus]}>
-                  {statusLabels[userStatus]}
-                </Badge>
-              )}
-            </div>
-
-            {userRating && (
-              <div className="flex items-center gap-1 mt-2">
-                <span className="text-xs text-muted-foreground">Tu puntuación:</span>
-                <span className="text-sm font-medium text-primary">{userRating}/10</span>
+          <div className="flex items-center justify-between">
+            {book.average_rating > 0 ? (
+              <div className="flex items-center gap-1">
+                <Star className="w-4 h-4 fill-accent text-accent" />
+                <span className="text-sm font-medium text-foreground">
+                  {book.average_rating.toFixed(1)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  ({book.ratings_count})
+                </span>
               </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">Sin puntuaciones</span>
+            )}
+
+            {userStatus && (
+              <Badge className={statusColors[userStatus]}>
+                {statusLabels[userStatus]}
+              </Badge>
             )}
           </div>
+
+          {/* Quick Rating - always show for logged in users */}
+          {showQuickRating && user && (
+            <div className="mt-2 pt-2 border-t border-border">
+              <QuickRating
+                bookId={book.id}
+                currentRating={effectiveUserRating}
+                onRate={handleQuickRate}
+                size="sm"
+              />
+            </div>
+          )}
+
+          {/* Show user rating if quick rating is disabled but rating exists */}
+          {!showQuickRating && effectiveUserRating && (
+            <div className="flex items-center gap-1 mt-2">
+              <span className="text-xs text-muted-foreground">Tu puntuación:</span>
+              <span className="text-sm font-medium text-primary">{effectiveUserRating}/10</span>
+            </div>
+          )}
         </div>
-      </Card>
-    </Link>
+      </div>
+    </Card>
   );
 };

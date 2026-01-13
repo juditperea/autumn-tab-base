@@ -104,10 +104,12 @@ export const useAddToShelf = () => {
   return useMutation({
     mutationFn: async ({ 
       bookId, 
-      status 
+      status,
+      rating,
     }: { 
       bookId: string; 
       status: ReadingStatus;
+      rating?: number;
     }) => {
       if (!user?.id) throw new Error("User not authenticated");
 
@@ -117,6 +119,7 @@ export const useAddToShelf = () => {
           user_id: user.id,
           book_id: bookId,
           status,
+          rating: rating ?? null,
           started_at: status === "reading" ? new Date().toISOString().split("T")[0] : null,
         })
         .select()
@@ -128,6 +131,8 @@ export const useAddToShelf = () => {
     onSuccess: (_, { bookId }) => {
       queryClient.invalidateQueries({ queryKey: ["userBooks"] });
       queryClient.invalidateQueries({ queryKey: ["userBook", user?.id, bookId] });
+      queryClient.invalidateQueries({ queryKey: ["book"] });
+      queryClient.invalidateQueries({ queryKey: ["books"] });
     },
   });
 };
