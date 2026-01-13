@@ -2,12 +2,13 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Search, Library, Sparkles } from "lucide-react";
+import { BookOpen, Search, Library, Sparkles, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserBooks } from "@/hooks/useUserBooks";
 import { useAllCuratedCollections } from "@/hooks/useCuratedCollections";
 import { CuratedCollectionSection } from "@/components/books/CuratedCollectionSection";
+import { FeaturedReviews } from "@/components/reviews/FeaturedReviews";
 
 // Quick action genres - MUST match the GENRES in Search.tsx
 const QUICK_ACTIONS = [
@@ -122,6 +123,15 @@ const Feed = () => {
             ))}
           </div>
         </div>
+
+        {/* Featured Reviews Section */}
+        <section>
+          <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Star className="w-5 h-5 text-primary" />
+            Reseñas destacadas
+          </h2>
+          <FeaturedReviews limit={3} />
+        </section>
 
         {/* Curated Collections with real books */}
         {curatedCollections?.map((collection) => (

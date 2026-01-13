@@ -121,8 +121,6 @@ export const useUserReviews = (userId: string | undefined) => {
 };
 
 export const useRecentReviews = (limit: number = 10) => {
-  const { user } = useAuth();
-
   return useQuery({
     queryKey: ["reviews", "recent", limit],
     queryFn: async () => {
@@ -157,6 +155,68 @@ export const useRecentReviews = (limit: number = 10) => {
 
       return reviewsWithRatings as Review[];
     },
+  });
+};
+
+// Featured reviews ordered by votes (likes)
+export const useFeaturedReviews = (limit: number = 5) => {
+  return useQuery({
+    queryKey: ["reviews", "featured", limit],
+    queryFn: async () => {
+      // Get all reviews with profiles and books
+      const { data: reviews, error } = await supabase
+        .from("reviews")
+        .select(`
+          *,
+          profile:profiles(username, avatar_url),
+          book:books(id, title, authors, cover_url)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(50); // Fetch more to filter by votes
+
+      if (error) throw error;
+
+      // Get votes count for each review and ratings
+      const reviewsWithVotes = await Promise.all(
+        reviews.map(async (review) => {
+          const { count: upvotes } = await supabase
+            .from("review_votes")
+            .select("*", { count: "exact", head: true })
+            .eq("review_id", review.id)
+            .eq("vote", 1);
+
+          const { count: downvotes } = await supabase
+            .from("review_votes")
+            .select("*", { count: "exact", head: true })
+            .eq("review_id", review.id)
+            .eq("vote", -1);
+
+          const { data: userBook } = await supabase
+            .from("user_books")
+            .select("rating")
+            .eq("user_id", review.user_id)
+            .eq("book_id", review.book_id)
+            .maybeSingle();
+
+          return {
+            ...review,
+            user_book: userBook,
+            votes_count: (upvotes ?? 0) - (downvotes ?? 0),
+          };
+        })
+      );
+
+      // Sort by votes (highest first) then by date
+      return reviewsWithVotes
+        .sort((a, b) => {
+          if (b.votes_count !== a.votes_count) {
+            return b.votes_count - a.votes_count;
+          }
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        })
+        .slice(0, limit) as Review[];
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };
 
