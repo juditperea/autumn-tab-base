@@ -62,8 +62,37 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
   const [addedBookId, setAddedBookId] = useState<string | null>(null);
   const [userBookId, setUserBookId] = useState<string | null>(null);
   const [userRating, setUserRating] = useState<number | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  const handleAdd = async () => {
+  // Navigate to book detail - adds book to DB first if needed
+  const handleCardClick = async (e: React.MouseEvent) => {
+    // Don't navigate if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') || 
+      target.closest('[role="button"]') ||
+      target.closest('[data-interactive="true"]')
+    ) {
+      return;
+    }
+
+    setIsNavigating(true);
+    try {
+      const result = await addBook.mutateAsync(book);
+      setAddedBookId(result.id);
+      navigate(`/libro/${result.id}`);
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo cargar el libro",
+      });
+      setIsNavigating(false);
+    }
+  };
+
+  const handleAdd = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       const result = await addBook.mutateAsync(book);
       setAddedBookId(result.id);
@@ -140,8 +169,18 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
   // Show external rating if available
   const hasExternalRating = book.external_rating && book.external_rating > 0;
 
+  const isLoading = addBook.isPending || isNavigating;
+
   return (
-    <Card className="p-4 shadow-card border-dashed border-primary/30">
+    <Card 
+      className="p-4 shadow-card border-dashed border-primary/30 cursor-pointer hover:shadow-warm transition-shadow relative"
+      onClick={handleCardClick}
+    >
+      {isNavigating && (
+        <div className="absolute inset-0 bg-background/50 flex items-center justify-center rounded-lg z-10">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      )}
       <div className="flex gap-4">
         {book.cover_url ? (
           <img
@@ -156,7 +195,9 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
         )}
         
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground mb-1 line-clamp-2">{book.title}</h3>
+          <h3 className="font-semibold text-foreground mb-1 line-clamp-2 hover:text-primary transition-colors">
+            {book.title}
+          </h3>
           <p className="text-sm text-muted-foreground mb-2">
             {book.authors.join(", ")}
           </p>
@@ -206,7 +247,7 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
 
           {/* Quick Rating for logged in users */}
           {user && (
-            <div className="mb-3 pb-3 border-b border-border">
+            <div className="mb-3 pb-3 border-b border-border" data-interactive="true">
               <QuickRating
                 bookId={addedBookId || "pending"}
                 currentRating={userRating}
@@ -226,10 +267,10 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
             <Button
               size="sm"
               onClick={handleAdd}
-              disabled={addBook.isPending}
+              disabled={isLoading}
               className="w-full"
             >
-              {addBook.isPending ? (
+              {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : (
                 <Plus className="w-4 h-4 mr-2" />

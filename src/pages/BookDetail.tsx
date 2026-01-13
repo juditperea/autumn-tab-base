@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Dialog, 
   DialogContent, 
@@ -12,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger 
 } from "@/components/ui/dialog";
-import { ArrowLeft, Star, Calendar, BookOpen, Globe, Loader2 } from "lucide-react";
+import { ArrowLeft, Star, Calendar, BookOpen, Globe, Loader2, MessageSquare, ExternalLink } from "lucide-react";
 import { useBook } from "@/hooks/useBooks";
 import { useUserBookForBook, useAddToShelf, useUpdateUserBook, useRemoveFromShelf } from "@/hooks/useUserBooks";
 import { StatusSelector } from "@/components/books/StatusSelector";
@@ -20,6 +21,60 @@ import { RatingControl } from "@/components/books/RatingControl";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { useToast } from "@/hooks/use-toast";
 import type { ReadingStatus } from "@/hooks/useUserBooks";
+
+// External reviews placeholder - in future could fetch from APIs
+interface ExternalReview {
+  source: string;
+  rating?: number;
+  excerpt?: string;
+  url?: string;
+}
+
+const ExternalReviewsSection = ({ book }: { book: { title: string; authors: string[]; isbn13?: string | null } }) => {
+  // For now, show helpful links to find external reviews
+  const googleBooksUrl = `https://www.google.com/search?q=${encodeURIComponent(`"${book.title}" ${book.authors[0]} reseña review`)}`;
+  const goodreadsUrl = book.isbn13 
+    ? `https://www.goodreads.com/search?q=${book.isbn13}`
+    : `https://www.goodreads.com/search?q=${encodeURIComponent(`${book.title} ${book.authors[0]}`)}`;
+
+  return (
+    <Card className="p-6 shadow-card">
+      <div className="text-center space-y-4">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <ExternalLink className="w-5 h-5" />
+          <span className="text-sm">Busca reseñas en otras plataformas</span>
+        </div>
+        
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+          >
+            <a href={goodreadsUrl} target="_blank" rel="noopener noreferrer">
+              Goodreads
+              <ExternalLink className="w-3 h-3 ml-1" />
+            </a>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+          >
+            <a href={googleBooksUrl} target="_blank" rel="noopener noreferrer">
+              Google
+              <ExternalLink className="w-3 h-3 ml-1" />
+            </a>
+          </Button>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Las reseñas externas se abren en una nueva pestaña
+        </p>
+      </div>
+    </Card>
+  );
+};
 
 const BookDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -256,8 +311,29 @@ const BookDetail = () => {
           </Card>
         )}
 
-        {/* Reviews */}
-        <ReviewList bookId={book.id} />
+        {/* Reviews with Tabs */}
+        <div className="space-y-4">
+          <Tabs defaultValue="app" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="app" className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                De la comunidad
+              </TabsTrigger>
+              <TabsTrigger value="external" className="flex items-center gap-2">
+                <ExternalLink className="w-4 h-4" />
+                Externas
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="app" className="mt-4">
+              <ReviewList bookId={book.id} />
+            </TabsContent>
+            
+            <TabsContent value="external" className="mt-4">
+              <ExternalReviewsSection book={book} />
+            </TabsContent>
+          </Tabs>
+        </div>
       </main>
     </div>
   );
