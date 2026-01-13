@@ -1,11 +1,15 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, BookOpen, Calendar, Globe, Star } from "lucide-react";
+import { Loader2, Plus, BookOpen, Calendar, Globe, Star, Check } from "lucide-react";
 import type { ExternalBook } from "@/hooks/useExternalBooks";
 import { useAddExternalBook } from "@/hooks/useExternalBooks";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAddToShelf, useUpdateUserBook } from "@/hooks/useUserBooks";
+import { QuickRating } from "./QuickRating";
 
 interface ExternalBookCardProps {
   book: ExternalBook;
@@ -49,11 +53,20 @@ const ExternalRatingStars = ({ rating, count, source }: {
 export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const addBook = useAddExternalBook();
+  const addToShelf = useAddToShelf();
+  const updateUserBook = useUpdateUserBook();
+  
+  // Track if book was added and its ID
+  const [addedBookId, setAddedBookId] = useState<string | null>(null);
+  const [userBookId, setUserBookId] = useState<string | null>(null);
+  const [userRating, setUserRating] = useState<number | null>(null);
 
   const handleAdd = async () => {
     try {
       const result = await addBook.mutateAsync(book);
+      setAddedBookId(result.id);
       
       if (result.existing) {
         toast({
@@ -69,11 +82,54 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
       
       // Navigate to the book detail page
       navigate(`/libro/${result.id}`);
-    } catch (error) {
+    } catch {
       toast({
         variant: "destructive",
         title: "Error",
         description: "No se pudo añadir el libro",
+      });
+    }
+  };
+
+  const handleAddWithRating = async (rating: number) => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Debes iniciar sesión para puntuar libros",
+      });
+      return;
+    }
+
+    try {
+      // First add the book to the database
+      const bookResult = await addBook.mutateAsync(book);
+      setAddedBookId(bookResult.id);
+      
+      // Then add to user's shelf with rating
+      if (userBookId) {
+        // Already in shelf, just update rating
+        await updateUserBook.mutateAsync({ id: userBookId, rating });
+      } else {
+        // Add to shelf with rating
+        const shelfResult = await addToShelf.mutateAsync({ 
+          bookId: bookResult.id, 
+          status: "read", 
+          rating 
+        });
+        setUserBookId(shelfResult.id);
+      }
+      
+      setUserRating(rating);
+      
+      toast({
+        title: "¡Libro puntuado!",
+        description: `Has puntuado "${book.title}" con ${rating}/10`,
+      });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo guardar la puntuación",
       });
     }
   };
@@ -148,19 +204,39 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
             )}
           </div>
 
-          <Button
-            size="sm"
-            onClick={handleAdd}
-            disabled={addBook.isPending}
-            className="w-full"
-          >
-            {addBook.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : (
-              <Plus className="w-4 h-4 mr-2" />
-            )}
-            Añadir a la biblioteca
-          </Button>
+          {/* Quick Rating for logged in users */}
+          {user && (
+            <div className="mb-3 pb-3 border-b border-border">
+              <QuickRating
+                bookId={addedBookId || "pending"}
+                currentRating={userRating}
+                onRate={handleAddWithRating}
+                size="sm"
+              />
+              {userRating && (
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <Check className="w-3 h-3 text-secondary" />
+                  Añadido a tu biblioteca
+                </p>
+              )}
+            </div>
+          )}
+
+          {!userRating && (
+            <Button
+              size="sm"
+              onClick={handleAdd}
+              disabled={addBook.isPending}
+              className="w-full"
+            >
+              {addBook.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Plus className="w-4 h-4 mr-2" />
+              )}
+              Añadir a la biblioteca
+            </Button>
+          )}
         </div>
       </div>
     </Card>
