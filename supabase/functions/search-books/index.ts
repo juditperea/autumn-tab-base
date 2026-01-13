@@ -20,6 +20,9 @@ interface BookResult {
   relevance_score?: number;
   popularity_score?: number;
   found_in_both?: boolean;
+  // External ratings data (for display orientation, not integration)
+  external_rating?: number | null;
+  external_ratings_count?: number | null;
 }
 
 interface SearchParams {
@@ -93,6 +96,9 @@ async function searchGoogleBooks(params: SearchParams): Promise<BookResult[]> {
       const info = item.volumeInfo || {};
       const identifiers = info.industryIdentifiers || [];
       
+      // Filter out country-based categories
+      const rawGenres = info.categories || [];
+      
       return {
         title: info.title || "",
         authors: info.authors || [],
@@ -101,11 +107,14 @@ async function searchGoogleBooks(params: SearchParams): Promise<BookResult[]> {
                    info.imageLinks?.smallThumbnail?.replace("http://", "https://") || null,
         isbn10: identifiers.find((id: any) => id.type === "ISBN_10")?.identifier || null,
         isbn13: identifiers.find((id: any) => id.type === "ISBN_13")?.identifier || null,
-        genres: info.categories || [],
+        genres: rawGenres, // Will be filtered later
         language: info.language || null,
         page_count: info.pageCount || null,
         published_year: info.publishedDate ? parseInt(info.publishedDate.substring(0, 4)) : null,
         source: "google_books",
+        // Add ratings data from Google
+        external_rating: info.averageRating || null,
+        external_ratings_count: info.ratingsCount || null,
       };
     });
   } catch (error) {
@@ -182,13 +191,16 @@ async function searchOpenLibrary(params: SearchParams): Promise<BookResult[]> {
         cover_url: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : null,
         isbn10: doc.isbn?.find((i: string) => i.length === 10) || null,
         isbn13: doc.isbn?.find((i: string) => i.length === 13) || null,
-        genres: doc.subject?.slice(0, 5) || [],
+        genres: doc.subject?.slice(0, 8) || [], // Get more, will filter later
         language: languages[0] || null,
         page_count: doc.number_of_pages_median || null,
         published_year: doc.first_publish_year || null,
         source: "open_library",
         // Add popularity data for relevance scoring
         popularity_score: ratingsCount + (readinglogCount * 0.1),
+        // OpenLibrary has ratings too
+        external_rating: doc.ratings_average || null,
+        external_ratings_count: ratingsCount || null,
       };
     });
   } catch (error) {
@@ -200,6 +212,39 @@ async function searchOpenLibrary(params: SearchParams): Promise<BookResult[]> {
 // ============================================
 // PHASE 1: Deduplication with Smart Merging
 // ============================================
+
+// List of country names to exclude from genres
+const EXCLUDED_GENRE_TERMS = new Set([
+  // Countries (Spanish)
+  "chile", "argentina", "peru", "perú", "colombia", "mexico", "méxico", "españa", "spain",
+  "venezuela", "ecuador", "bolivia", "uruguay", "paraguay", "cuba", "guatemala", "honduras",
+  "el salvador", "nicaragua", "costa rica", "panama", "panamá", "puerto rico", "dominicana",
+  // Countries (English)  
+  "brazil", "brasil", "united states", "usa", "uk", "england", "france", "germany", "italy",
+  "portugal", "china", "japan", "india", "russia", "australia", "canada", "africa",
+  // Geographic terms
+  "latin america", "américa latina", "south america", "sudamérica", "north america",
+  "europe", "europa", "asia", "oceania", "caribbean", "caribe",
+  // Other non-genre terms often found in subjects
+  "accessible book", "protected daisy", "in library", "lending library",
+  "open library staff picks", "internet archive wishlist", "printdisabled"
+]);
+
+function isValidGenre(genre: string): boolean {
+  const normalized = genre.toLowerCase().trim();
+  // Skip if it's in the exclusion list
+  if (EXCLUDED_GENRE_TERMS.has(normalized)) return false;
+  // Skip very short or very long subjects
+  if (normalized.length < 3 || normalized.length > 40) return false;
+  // Skip if it contains common non-genre patterns
+  if (/^\d+$/.test(normalized)) return false; // Just numbers
+  if (normalized.includes("--")) return false; // Library subject headings with --
+  return true;
+}
+
+function filterGenres(genres: string[]): string[] {
+  return genres.filter(isValidGenre);
+}
 
 function normalizeISBN(isbn: string | null): string | null {
   if (!isbn) return null;
@@ -291,8 +336,8 @@ function mergeBooks(book1: BookResult, book2: BookResult): BookResult {
       book1.description : book2.description;
   }
   
-  // Merge genres
-  const allGenres = [...new Set([...(book1.genres || []), ...(book2.genres || [])])];
+  // Merge genres (filtering out country names)
+  const allGenres = filterGenres([...new Set([...(book1.genres || []), ...(book2.genres || [])])]);
   
   // Prefer the more complete ISBN
   const isbn13 = book1.isbn13 || book2.isbn13;
@@ -310,6 +355,9 @@ function mergeBooks(book1: BookResult, book2: BookResult): BookResult {
     page_count: book1.page_count || book2.page_count,
     published_year: book1.published_year || book2.published_year,
     source: "merged",
+    // Merge external ratings - prefer Google's ratings as they're usually more complete
+    external_rating: book1.external_rating || book2.external_rating,
+    external_ratings_count: (book1.external_ratings_count || 0) + (book2.external_ratings_count || 0),
   };
 }
 
@@ -318,15 +366,21 @@ function deduplicateAndMerge(results: BookResult[]): BookResult[] {
   const uniqueBooks: BookResult[] = [];
   
   for (const book of results) {
+    // Filter genres for each book
+    const filteredBook = {
+      ...book,
+      genres: filterGenres(book.genres || []).slice(0, 5)
+    };
+    
     let foundDuplicate = false;
     
     for (let i = 0; i < uniqueBooks.length; i++) {
-      if (areDuplicates(uniqueBooks[i], book)) {
+      if (areDuplicates(uniqueBooks[i], filteredBook)) {
         // Mark as found in both sources (more relevant)
-        const merged = mergeBooks(uniqueBooks[i], book);
+        const merged = mergeBooks(uniqueBooks[i], filteredBook);
         merged.found_in_both = true;
         // Combine popularity scores
-        merged.popularity_score = (uniqueBooks[i].popularity_score || 0) + (book.popularity_score || 0);
+        merged.popularity_score = (uniqueBooks[i].popularity_score || 0) + (filteredBook.popularity_score || 0);
         uniqueBooks[i] = merged;
         foundDuplicate = true;
         break;
@@ -334,7 +388,7 @@ function deduplicateAndMerge(results: BookResult[]): BookResult[] {
     }
     
     if (!foundDuplicate) {
-      uniqueBooks.push({ ...book, found_in_both: false });
+      uniqueBooks.push({ ...filteredBook, found_in_both: false });
     }
   }
   
