@@ -14,6 +14,9 @@ export interface ExternalBook {
   page_count: number | null;
   published_year: number | null;
   source: string;
+  // External ratings for orientation (not integrated)
+  external_rating?: number | null;
+  external_ratings_count?: number | null;
 }
 
 export interface SearchFilters {

@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Check, BookOpen, Calendar, Globe } from "lucide-react";
+import { Loader2, Plus, BookOpen, Calendar, Globe, Star } from "lucide-react";
 import type { ExternalBook } from "@/hooks/useExternalBooks";
 import { useAddExternalBook } from "@/hooks/useExternalBooks";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +10,41 @@ import { useToast } from "@/hooks/use-toast";
 interface ExternalBookCardProps {
   book: ExternalBook;
 }
+
+// Render stars for external rating (1-5 scale)
+const ExternalRatingStars = ({ rating, count, source }: { 
+  rating: number; 
+  count: number; 
+  source: string;
+}) => {
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating - fullStars >= 0.5;
+  
+  const sourceName = source === "google_books" ? "Google Books" : 
+                     source === "open_library" ? "OpenLibrary" : "externa";
+  
+  return (
+    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+      <div className="flex items-center">
+        {[...Array(5)].map((_, i) => (
+          <Star 
+            key={i} 
+            className={`w-3 h-3 ${
+              i < fullStars 
+                ? "fill-accent text-accent" 
+                : i === fullStars && hasHalfStar 
+                  ? "fill-accent/50 text-accent" 
+                  : "text-muted-foreground/30"
+            }`} 
+          />
+        ))}
+      </div>
+      <span>
+        ({count > 0 ? count.toLocaleString() : "0"} en {sourceName})
+      </span>
+    </div>
+  );
+};
 
 export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
   const navigate = useNavigate();
@@ -43,7 +78,11 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
     }
   };
 
-  const sourceLabel = book.source === "google_books" ? "Google Books" : "OpenLibrary";
+  const sourceLabel = book.source === "google_books" ? "Google Books" : 
+                      book.source === "merged" ? "Múltiples fuentes" : "OpenLibrary";
+  
+  // Show external rating if available
+  const hasExternalRating = book.external_rating && book.external_rating > 0;
 
   return (
     <Card className="p-4 shadow-card border-dashed border-primary/30">
@@ -65,6 +104,17 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
           <p className="text-sm text-muted-foreground mb-2">
             {book.authors.join(", ")}
           </p>
+          
+          {/* External rating as orientation */}
+          {hasExternalRating && (
+            <div className="mb-2">
+              <ExternalRatingStars 
+                rating={book.external_rating!} 
+                count={book.external_ratings_count || 0}
+                source={book.source}
+              />
+            </div>
+          )}
           
           <div className="flex flex-wrap gap-1 mb-2">
             {book.genres.slice(0, 2).map((genre) => (
