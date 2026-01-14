@@ -196,14 +196,18 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
         
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2">
-            <h3 className="font-semibold text-foreground mb-1 line-clamp-2 hover:text-primary transition-colors flex-1">
-              {book.title}
-            </h3>
-            {book.translated && (
-              <span className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full flex-shrink-0" title={`Original: ${book.original_title}`}>
-                <Languages className="w-3 h-3" />
-              </span>
-            )}
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground mb-0.5 line-clamp-2 hover:text-primary transition-colors">
+                {book.title}
+              </h3>
+              {/* Always show original title as subtitle when translated */}
+              {book.translated && book.original_title && book.original_title !== book.title && (
+                <p className="text-xs text-muted-foreground/70 italic mb-1 flex items-center gap-1">
+                  <Languages className="w-3 h-3 text-primary/60" />
+                  <span>Original: {book.original_title}</span>
+                </p>
+              )}
+            </div>
           </div>
           <p className="text-sm text-muted-foreground mb-2">
             {book.authors.join(", ")}

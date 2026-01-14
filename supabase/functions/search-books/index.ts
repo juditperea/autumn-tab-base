@@ -41,7 +41,7 @@ interface SearchParams {
 }
 
 // ============================================
-// TRANSLATION with Lovable AI
+// SMART TRANSLATION with Lovable AI
 // ============================================
 
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -53,6 +53,30 @@ const LANGUAGE_NAMES: Record<string, string> = {
   it: "Italian",
   ca: "Catalan",
 };
+
+// Check if text contains non-Latin characters (Cyrillic, Arabic, Chinese, Japanese, Korean, etc.)
+function containsNonLatinCharacters(text: string): boolean {
+  // Regex for non-Latin scripts
+  const nonLatinRegex = /[\u0400-\u04FF]|[\u0600-\u06FF]|[\u4E00-\u9FFF]|[\u3040-\u30FF]|[\uAC00-\uD7AF]|[\u0370-\u03FF]|[\u0590-\u05FF]|[\u0900-\u097F]|[\u0E00-\u0E7F]/;
+  return nonLatinRegex.test(text);
+}
+
+// Check if title looks like a proper name or recognized work that shouldn't be translated
+function shouldNotTranslateTitle(title: string): boolean {
+  // Common patterns that indicate proper names or brand-like titles
+  const properNamePatterns = [
+    /^[A-Z][a-z]+ [A-Z][a-z]+$/, // "Harry Potter", "Don Quijote"
+    /^(The |El |La |Le |Der |Das |Il |O )?[A-Z][a-z]+ (of|de|del|di|du|von|of the) /i, // "Lord of the Rings"
+  ];
+  
+  // If it's very short (1-2 words) and all Latin, likely a proper name
+  const words = title.trim().split(/\s+/);
+  if (words.length <= 2 && !containsNonLatinCharacters(title)) {
+    return true;
+  }
+  
+  return properNamePatterns.some(pattern => pattern.test(title));
+}
 
 interface TranslationResult {
   index: number;
@@ -95,15 +119,40 @@ async function translateBookBatch(
     return lowerLang.substring(0, 2);
   };
 
-  // Filter books that need translation (different language from target)
-  // Only translate first 8 books to keep response fast
-  const booksToTranslate: { book: BookResult; originalIndex: number }[] = [];
+  // NEW SMART LOGIC: Only translate if:
+  // 1. Title contains non-Latin characters (Cyrillic, Arabic, Chinese, etc.)
+  // 2. OR book language is different AND title is longer/complex
+  const booksToTranslate: { book: BookResult; originalIndex: number; translateTitle: boolean }[] = [];
   
   for (let i = 0; i < books.length && booksToTranslate.length < 8; i++) {
     const book = books[i];
     const bookLang = normalizeBookLanguage(book.language);
-    if (bookLang && bookLang !== targetLanguage) {
-      booksToTranslate.push({ book, originalIndex: i });
+    
+    // Check if title has non-Latin characters - ALWAYS translate these
+    const hasNonLatin = containsNonLatinCharacters(book.title);
+    
+    // Check if language is different from target
+    const isDifferentLang = bookLang && bookLang !== targetLanguage;
+    
+    // For Latin-script titles in different language: only translate if it's a complex title
+    // (not a proper name or short recognizable title)
+    const shouldTranslateLatinTitle = isDifferentLang && 
+      !shouldNotTranslateTitle(book.title) &&
+      book.title.split(/\s+/).length > 3; // More than 3 words
+    
+    if (hasNonLatin || shouldTranslateLatinTitle) {
+      booksToTranslate.push({ 
+        book, 
+        originalIndex: i,
+        translateTitle: hasNonLatin // Only translate title if non-Latin
+      });
+    } else if (isDifferentLang && book.description) {
+      // Different language but Latin title - only translate description
+      booksToTranslate.push({ 
+        book, 
+        originalIndex: i,
+        translateTitle: false
+      });
     }
   }
 
@@ -115,18 +164,18 @@ async function translateBookBatch(
   console.log(`Translating ${booksToTranslate.length} books to ${targetLanguage}`);
 
   try {
-    // Prepare simpler translation request - just titles and short descriptions
-    const booksData = booksToTranslate.map(({ book }, index) => ({
-      i: index, // shorter key name
-      t: book.title,
-      d: book.description ? book.description.substring(0, 200) : null, // Much shorter descriptions
+    // Prepare translation request - only include titles that need translation
+    const booksData = booksToTranslate.map(({ book, translateTitle }, index) => ({
+      i: index,
+      t: translateTitle ? book.title : null, // Only include title if it needs translation
+      d: book.description ? book.description.substring(0, 200) : null,
     }));
 
     const targetLangName = LANGUAGE_NAMES[targetLanguage] || "Spanish";
 
     // Add timeout to prevent slow responses
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -140,14 +189,21 @@ async function translateBookBatch(
         messages: [
           {
             role: "system",
-            content: `Translate book titles and descriptions to ${targetLangName}. Keep author names unchanged. Return ONLY a JSON array.`
+            content: `Translate book titles and descriptions to ${targetLangName}. 
+RULES:
+- If "t" is null, don't include it in output
+- NEVER translate author names
+- NEVER translate publisher names
+- Keep proper nouns as-is (character names, place names)
+- For non-Latin script titles, provide a readable translation
+Return ONLY a JSON array.`
           },
           {
             role: "user",
             content: `Translate to ${targetLangName}. Return JSON array only, no markdown:
 ${JSON.stringify(booksData)}
 
-Format: [{"i":0,"t":"title","d":"desc or null"}]`
+Format: [{"i":0,"t":"translated title or null","d":"translated desc or null"}]`
           }
         ],
         temperature: 0.2,
@@ -171,12 +227,11 @@ Format: [{"i":0,"t":"title","d":"desc or null"}]`
     }
 
     // Parse the JSON response with better error handling
-    let translations: { i: number; t: string; d: string | null }[];
+    let translations: { i: number; t: string | null; d: string | null }[];
     try {
       // Remove markdown code blocks if present
       let cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
       
-      // Try to fix common JSON issues
       // Find the array bounds
       const startIdx = cleanContent.indexOf('[');
       const endIdx = cleanContent.lastIndexOf(']');
@@ -187,25 +242,8 @@ Format: [{"i":0,"t":"title","d":"desc or null"}]`
       
       translations = JSON.parse(cleanContent);
     } catch (parseError) {
-      console.error("Failed to parse translation response, trying fallback...");
-      // Try to extract individual translations manually
-      try {
-        const matches = content.matchAll(/"i"\s*:\s*(\d+)\s*,\s*"t"\s*:\s*"([^"]+)"/g);
-        translations = [];
-        for (const match of matches) {
-          translations.push({
-            i: parseInt(match[1]),
-            t: match[2],
-            d: null
-          });
-        }
-        if (translations.length === 0) {
-          console.error("Fallback parsing also failed");
-          return books;
-        }
-      } catch {
-        return books;
-      }
+      console.error("Failed to parse translation response");
+      return books;
     }
 
     // Create result array
@@ -214,19 +252,26 @@ Format: [{"i":0,"t":"title","d":"desc or null"}]`
     for (const t of translations) {
       if (typeof t.i !== 'number' || t.i >= booksToTranslate.length) continue;
       
-      const { book, originalIndex } = booksToTranslate[t.i];
+      const { book, originalIndex, translateTitle } = booksToTranslate[t.i];
+      
+      // Only apply title translation if we requested it AND got a valid translation
+      const newTitle = (translateTitle && t.t) ? t.t : book.title;
+      const wasTranslated = translateTitle && t.t && t.t !== book.title;
       
       result[originalIndex] = {
         ...book,
+        // Always keep original title for display
         original_title: book.title,
         original_description: book.description ?? undefined,
-        title: t.t || book.title,
+        // Only change title if it was actually translated
+        title: newTitle,
         description: t.d || book.description,
-        translated: true,
+        // Mark as translated only if title was actually changed
+        translated: wasTranslated ? true : undefined,
       };
     }
 
-    console.log(`Successfully translated ${translations.length} books`);
+    console.log(`Successfully processed ${translations.length} books`);
     return result;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
@@ -234,7 +279,7 @@ Format: [{"i":0,"t":"title","d":"desc or null"}]`
     } else {
       console.error("Translation error:", error);
     }
-    return books; // Return original books on error
+    return books;
   }
 }
 
