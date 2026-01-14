@@ -12,6 +12,7 @@ import { useUserBooksStats } from "@/hooks/useUserBooks";
 import { useUserReviews } from "@/hooks/useReviews";
 import { RecentActivity } from "@/components/profile/RecentActivity";
 import { UserReviewsList } from "@/components/profile/UserReviewsList";
+import { FollowStats } from "@/components/social/FollowStats";
 
 interface Profile {
   username: string;
@@ -138,7 +139,15 @@ const Profile = () => {
           <h2 className="text-2xl font-bold text-foreground mb-1">
             {profile?.full_name || profile?.username}
           </h2>
-          <p className="text-muted-foreground mb-4">@{profile?.username}</p>
+          <p className="text-muted-foreground mb-2">@{profile?.username}</p>
+          
+          {/* Follow Stats */}
+          {user && (
+            <div className="flex justify-center mb-4">
+              <FollowStats userId={user.id} />
+            </div>
+          )}
+          
           <p className="text-sm text-foreground">
             {profile?.bio || "Sin biografía aún"}
           </p>
