@@ -38,12 +38,11 @@ export const FeaturedReviews = ({ limit = 5 }: FeaturedReviewsProps) => {
   return (
     <div className="space-y-3">
       {reviews.map((review: Review) => (
-        <Link
-          key={review.id}
-          to={`/libro/${review.book_id}`}
-          className="block"
-        >
-          <Card className="p-4 hover:bg-muted/50 transition-colors">
+        <Card key={review.id} className="p-4 hover:bg-muted/50 transition-colors">
+          <Link
+            to={`/libro/${review.book_id}`}
+            className="block"
+          >
             <div className="flex items-start gap-3 mb-3">
               {review.book?.cover_url ? (
                 <img
@@ -73,29 +72,33 @@ export const FeaturedReviews = ({ limit = 5 }: FeaturedReviewsProps) => {
             <p className="text-sm text-foreground line-clamp-3 mb-3">
               {review.content}
             </p>
+          </Link>
+          
+          <div className="flex items-center justify-between">
+            <Link 
+              to={`/perfil/${review.profile?.username}`}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Avatar className="w-6 h-6 hover:ring-2 hover:ring-primary transition-all">
+                <AvatarImage src={review.profile?.avatar_url ?? undefined} />
+                <AvatarFallback className="text-xs gradient-autumn text-white">
+                  {review.profile?.username?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                @{review.profile?.username}
+              </span>
+            </Link>
             
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Avatar className="w-6 h-6">
-                  <AvatarImage src={review.profile?.avatar_url ?? undefined} />
-                  <AvatarFallback className="text-xs gradient-autumn text-white">
-                    {review.profile?.username?.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-xs text-muted-foreground">
-                  @{review.profile?.username}
-                </span>
+            {(review.votes_count ?? 0) > 0 && (
+              <div className="flex items-center gap-1 text-xs text-secondary">
+                <ThumbsUp className="w-3.5 h-3.5" />
+                <span>{review.votes_count} útil{review.votes_count !== 1 ? "es" : ""}</span>
               </div>
-              
-              {(review.votes_count ?? 0) > 0 && (
-                <div className="flex items-center gap-1 text-xs text-secondary">
-                  <ThumbsUp className="w-3.5 h-3.5" />
-                  <span>{review.votes_count} útil{review.votes_count !== 1 ? "es" : ""}</span>
-                </div>
-              )}
-            </div>
-          </Card>
-        </Link>
+            )}
+          </div>
+        </Card>
       ))}
     </div>
   );
