@@ -2,13 +2,14 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Search, Library, Sparkles, Star } from "lucide-react";
+import { BookOpen, Search, Library, Sparkles, Star, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserBooks } from "@/hooks/useUserBooks";
 import { useAllCuratedCollections } from "@/hooks/useCuratedCollections";
 import { CuratedCollectionSection } from "@/components/books/CuratedCollectionSection";
 import { FeaturedReviews } from "@/components/reviews/FeaturedReviews";
+import { ActivityFeed } from "@/components/social/ActivityFeed";
 
 // Quick action genres - MUST match the GENRES in Search.tsx
 const QUICK_ACTIONS = [
@@ -123,6 +124,17 @@ const Feed = () => {
             ))}
           </div>
         </div>
+
+        {/* Social Activity Feed */}
+        {user && (
+          <section>
+            <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Actividad de tus amigos
+            </h2>
+            <ActivityFeed limit={10} />
+          </section>
+        )}
 
         {/* Featured Reviews Section */}
         <section>
