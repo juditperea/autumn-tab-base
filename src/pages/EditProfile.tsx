@@ -202,6 +202,7 @@ const EditProfile = () => {
             <FavoriteBooks 
               userId={user.id} 
               isOwner={true}
+              isEditMode={true}
               onAddClick={handleAddFavorite}
             />
           </Card>
