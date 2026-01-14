@@ -41,7 +41,7 @@ interface SearchParams {
 }
 
 // ============================================
-// NO TRANSLATION - Only Spanish editions from API
+// SPANISH EDITIONS FILTER - Validate by metadata AND content
 // ============================================
 
 // Normalize language codes for comparison
@@ -49,13 +49,16 @@ function normalizeLanguageCode(lang: string | null): string | null {
   if (!lang) return null;
   
   const normalizedLang: Record<string, string> = {
-    "spa": "es", "spanish": "es",
+    "spa": "es", "spanish": "es", "español": "es",
     "eng": "en", "english": "en",
-    "fre": "fr", "french": "fr", "fra": "fr",
-    "ger": "de", "german": "de", "deu": "de",
-    "por": "pt", "portuguese": "pt",
-    "ita": "it", "italian": "it",
-    "cat": "ca", "catalan": "ca"
+    "fre": "fr", "french": "fr", "fra": "fr", "français": "fr",
+    "ger": "de", "german": "de", "deu": "de", "deutsch": "de",
+    "por": "pt", "portuguese": "pt", "português": "pt",
+    "ita": "it", "italian": "it", "italiano": "it",
+    "cat": "ca", "catalan": "ca", "català": "ca",
+    "rus": "ru", "russian": "ru",
+    "jpn": "ja", "japanese": "ja",
+    "zho": "zh", "chinese": "zh", "chi": "zh"
   };
   
   const lowerLang = lang.toLowerCase();
@@ -72,53 +75,217 @@ function normalizeLanguageCode(lang: string | null): string | null {
   return lowerLang.substring(0, 2);
 }
 
-// Check if a book is in Spanish
-function isSpanishEdition(book: { language: string | null }): boolean {
+// Common Spanish words to detect Spanish content
+const SPANISH_INDICATORS = new Set([
+  "el", "la", "los", "las", "de", "del", "en", "con", "por", "para", "que", "una", "uno",
+  "es", "son", "está", "están", "ha", "han", "ser", "como", "más", "pero", "su", "sus",
+  "le", "les", "se", "al", "lo", "ya", "sin", "sobre", "entre", "hasta", "desde",
+  "muy", "también", "este", "esta", "estos", "estas", "ese", "esa", "aquel", "aquella",
+  "cuando", "donde", "quien", "cual", "cuyo", "todo", "toda", "todos", "todas",
+  "otro", "otra", "otros", "otras", "mismo", "misma", "cada", "algún", "ningún",
+  "historia", "vida", "mundo", "amor", "muerte", "guerra", "hombre", "mujer", "tiempo",
+  "años", "día", "noche", "casa", "ciudad", "país", "siglo", "parte", "libro"
+]);
+
+// Common English words to detect English content
+const ENGLISH_INDICATORS = new Set([
+  "the", "a", "an", "of", "in", "to", "for", "with", "on", "at", "by", "from",
+  "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
+  "do", "does", "did", "will", "would", "could", "should", "may", "might",
+  "this", "that", "these", "those", "it", "its", "they", "them", "their",
+  "he", "she", "him", "her", "his", "we", "us", "our", "you", "your",
+  "and", "but", "or", "not", "no", "if", "when", "where", "who", "what", "which",
+  "all", "each", "every", "both", "few", "more", "most", "other", "some", "such",
+  "history", "life", "world", "love", "death", "war", "man", "woman", "time",
+  "years", "day", "night", "house", "city", "country", "century", "part", "book"
+]);
+
+// Common French words
+const FRENCH_INDICATORS = new Set([
+  "le", "la", "les", "de", "du", "des", "un", "une", "et", "en", "dans", "pour",
+  "avec", "sur", "par", "qui", "que", "est", "sont", "être", "avoir", "fait",
+  "cette", "ces", "tout", "tous", "plus", "aussi", "très", "bien", "même"
+]);
+
+// Detect primary language of text based on word frequency
+function detectTextLanguage(text: string | null): string | null {
+  if (!text || text.length < 20) return null;
+  
+  const words = text.toLowerCase()
+    .replace(/[^a-záéíóúüñàèìòùâêîôûäëïöü\s]/g, " ")
+    .split(/\s+/)
+    .filter(w => w.length > 1);
+  
+  if (words.length < 5) return null;
+  
+  let spanishScore = 0;
+  let englishScore = 0;
+  let frenchScore = 0;
+  
+  for (const word of words) {
+    if (SPANISH_INDICATORS.has(word)) spanishScore++;
+    if (ENGLISH_INDICATORS.has(word)) englishScore++;
+    if (FRENCH_INDICATORS.has(word)) frenchScore++;
+  }
+  
+  // Check for Spanish-specific characters (strong indicator)
+  if (/[ñáéíóú]/.test(text.toLowerCase())) {
+    spanishScore += 3;
+  }
+  
+  // Check for French-specific patterns
+  if (/[àâçèéêëîïôùûü]/.test(text.toLowerCase())) {
+    frenchScore += 2;
+  }
+  
+  const maxScore = Math.max(spanishScore, englishScore, frenchScore);
+  
+  if (maxScore < 2) return null; // Not enough evidence
+  
+  if (spanishScore === maxScore) return "es";
+  if (englishScore === maxScore) return "en";
+  if (frenchScore === maxScore) return "fr";
+  
+  return null;
+}
+
+// Check if book content appears to be in Spanish
+function isSpanishContent(book: { title: string; description: string | null }): boolean {
+  // Check title first
+  const titleLang = detectTextLanguage(book.title);
+  if (titleLang === "en" || titleLang === "fr") {
+    // Title is clearly not Spanish, check description
+    const descLang = detectTextLanguage(book.description);
+    // Only reject if description is also clearly non-Spanish
+    if (descLang && descLang !== "es") {
+      return false;
+    }
+  }
+  
+  // Check description for stronger signal
+  if (book.description && book.description.length > 50) {
+    const descLang = detectTextLanguage(book.description);
+    if (descLang === "en" || descLang === "fr") {
+      return false;
+    }
+  }
+  
+  // If we can't determine, give benefit of the doubt
+  return true;
+}
+
+// Check if a book is a Spanish edition (by metadata OR content)
+function isSpanishEdition(book: { language: string | null; title: string; description: string | null }): boolean {
   const lang = normalizeLanguageCode(book.language);
-  return lang === "es" || lang === "spa";
+  
+  // If explicitly marked as Spanish, accept it
+  if (lang === "es") {
+    return true;
+  }
+  
+  // If explicitly marked as another language, reject
+  if (lang && lang !== "es") {
+    return false;
+  }
+  
+  // If no language metadata, check content
+  return isSpanishContent(book);
 }
 
 // ============================================
-// PHASE 1: Unified Search with Fallback
+// PHASE 1: Unified Search - Get results, filter locally
 // ============================================
+
+// Map English genre names to Spanish equivalents for better Spanish results
+const GENRE_TRANSLATIONS: Record<string, string> = {
+  "fiction": "ficción novela",
+  "fantasy": "fantasía fantástico",
+  "science fiction": "ciencia ficción",
+  "mystery": "misterio detective",
+  "thriller": "thriller suspenso",
+  "romance": "romance amor",
+  "horror": "terror horror",
+  "history": "historia histórico",
+  "biography": "biografía",
+  "self-help": "autoayuda superación",
+  "young adult": "juvenil adolescente",
+  "children": "infantil niños",
+  "poetry": "poesía",
+  "drama": "drama teatro",
+  "adventure": "aventura aventuras",
+  "crime": "crimen policial",
+  "philosophy": "filosofía",
+  "psychology": "psicología",
+  "science": "ciencia científico",
+  "art": "arte artístico",
+  "music": "música",
+  "cooking": "cocina gastronomía",
+  "travel": "viajes",
+  "religion": "religión espiritual",
+  "sports": "deportes",
+  "business": "negocios empresa",
+  "comics": "cómics historietas",
+  "manga": "manga",
+  "classics": "clásicos literatura",
+  "contemporary": "contemporáneo actual",
+  "literary fiction": "ficción literaria"
+};
+
+function getSpanishGenreTerms(genre: string): string {
+  const lowerGenre = genre.toLowerCase();
+  return GENRE_TRANSLATIONS[lowerGenre] || genre;
+}
 
 async function searchGoogleBooks(params: SearchParams): Promise<BookResult[]> {
   try {
-    let searchQuery = params.query || "";
+    const results: BookResult[] = [];
     
-    // Add author filter to query
+    // Strategy: Make two searches - one with langRestrict, one with Spanish terms
+    const searches: Promise<Response>[] = [];
+    
+    // Build base query
+    let baseQuery = params.query || "";
     if (params.author) {
-      searchQuery += (searchQuery ? " " : "") + `inauthor:${params.author}`;
+      baseQuery += (baseQuery ? " " : "") + `inauthor:${params.author}`;
     }
     
-    // Add genre/subject filter
+    // Search 1: With langRestrict=es (works well for general queries)
+    let query1 = baseQuery;
     if (params.genre) {
-      searchQuery += (searchQuery ? " " : "") + `subject:${params.genre}`;
+      query1 += (query1 ? " " : "") + `subject:${params.genre}`;
+    }
+    if (!query1.trim()) {
+      query1 = "novela literatura";
+    }
+    const url1 = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query1)}&maxResults=40&orderBy=relevance&langRestrict=es`;
+    console.log("Google Books URL 1 (langRestrict=es):", url1);
+    searches.push(fetch(url1));
+    
+    // Search 2: With Spanish genre terms (better for genre-based searches)
+    if (params.genre) {
+      const spanishGenre = getSpanishGenreTerms(params.genre);
+      let query2 = baseQuery || spanishGenre;
+      if (baseQuery) {
+        query2 += " " + spanishGenre;
+      }
+      const url2 = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query2)}&maxResults=40&orderBy=relevance&langRestrict=es`;
+      console.log("Google Books URL 2 (Spanish terms):", url2);
+      searches.push(fetch(url2));
     }
     
-    // If no query, use a broad term to get results
-    if (!searchQuery.trim()) {
-      searchQuery = "literatura novela";
-    }
+    // Execute searches in parallel
+    const responses = await Promise.all(searches);
     
-    // ALWAYS restrict to Spanish editions using langRestrict=es
-    // This ensures only books with Spanish content are returned
-    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=35&orderBy=relevance&langRestrict=es`;
-    
-    console.log("Google Books URL (Spanish only):", url);
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error("Google Books API error:", response.status);
-      return [];
-    }
-
-    const data = await response.json();
-    
-    if (!data.items) return [];
-
-    return data.items
-      .map((item: any) => {
+    for (const response of responses) {
+      if (!response.ok) {
+        console.error("Google Books API error:", response.status);
+        continue;
+      }
+      
+      const data = await response.json();
+      if (!data.items) continue;
+      
+      const books = data.items.map((item: any) => {
         const info = item.volumeInfo || {};
         const identifiers = info.industryIdentifiers || [];
         const rawGenres = info.categories || [];
@@ -139,12 +306,18 @@ async function searchGoogleBooks(params: SearchParams): Promise<BookResult[]> {
           external_rating: info.averageRating || null,
           external_ratings_count: info.ratingsCount || null,
         };
-      })
-      // Double-check: only return books marked as Spanish
-      .filter((book: BookResult) => {
-        const lang = normalizeLanguageCode(book.language);
-        return lang === "es" || !book.language; // Include if Spanish or no language data
       });
+      
+      results.push(...books);
+    }
+    
+    // Filter to Spanish editions only (by metadata AND content validation)
+    const spanishBooks = results.filter((book: BookResult) => {
+      return isSpanishEdition(book);
+    });
+    
+    console.log(`Google Books: ${results.length} raw results, ${spanishBooks.length} Spanish editions`);
+    return spanishBooks;
   } catch (error) {
     console.error("Google Books search error:", error);
     return [];
@@ -153,48 +326,63 @@ async function searchGoogleBooks(params: SearchParams): Promise<BookResult[]> {
 
 async function searchOpenLibrary(params: SearchParams): Promise<BookResult[]> {
   try {
-    let searchQuery = params.query || "";
+    const results: BookResult[] = [];
+    const searches: Promise<Response>[] = [];
     
-    // Add author to query for OpenLibrary
+    // Build base query parts
+    let baseQuery = params.query || "";
     if (params.author) {
-      searchQuery += (searchQuery ? " " : "") + `author:${params.author}`;
+      baseQuery += (baseQuery ? " " : "") + `author:${params.author}`;
     }
-    
-    // Add subject for genre
-    if (params.genre) {
-      searchQuery += (searchQuery ? " " : "") + `subject:${params.genre}`;
-    }
-    
-    // ALWAYS add Spanish language filter to get Spanish editions
-    searchQuery += (searchQuery ? " " : "") + `language:spa`;
     
     // Add year range filter if specified
+    let yearFilter = "";
     if (params.yearMin !== undefined && params.yearMax !== undefined) {
-      searchQuery += (searchQuery ? " " : "") + `first_publish_year:[${params.yearMin} TO ${params.yearMax}]`;
+      yearFilter = `first_publish_year:[${params.yearMin} TO ${params.yearMax}]`;
     }
     
-    // If still no base query, add a broad term
-    if (!params.query && !params.author && !params.genre) {
-      searchQuery = "literatura " + searchQuery;
+    // Search 1: With language:spa filter
+    let query1 = baseQuery;
+    if (params.genre) {
+      query1 += (query1 ? " " : "") + `subject:${params.genre}`;
+    }
+    query1 += (query1 ? " " : "") + `language:spa`;
+    if (yearFilter) query1 += " " + yearFilter;
+    if (!baseQuery && !params.genre) {
+      query1 = "literatura " + query1;
     }
     
-    // Use fields parameter to get more complete data
-    const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(searchQuery)}&limit=30&fields=key,title,author_name,first_sentence,cover_i,isbn,subject,language,number_of_pages_median,first_publish_year,ratings_count,readinglog_count`;
+    const url1 = `https://openlibrary.org/search.json?q=${encodeURIComponent(query1)}&limit=40&fields=key,title,author_name,first_sentence,cover_i,isbn,subject,language,number_of_pages_median,first_publish_year,ratings_count,readinglog_count`;
+    console.log("OpenLibrary URL 1 (language:spa):", url1);
+    searches.push(fetch(url1));
     
-    console.log("OpenLibrary URL (Spanish only):", url);
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error("OpenLibrary API error:", response.status);
-      return [];
+    // Search 2: With Spanish genre terms (no language filter, rely on content detection)
+    if (params.genre) {
+      const spanishGenre = getSpanishGenreTerms(params.genre);
+      let query2 = baseQuery || spanishGenre;
+      if (baseQuery) {
+        query2 += " " + spanishGenre;
+      }
+      if (yearFilter) query2 += " " + yearFilter;
+      
+      const url2 = `https://openlibrary.org/search.json?q=${encodeURIComponent(query2)}&limit=40&fields=key,title,author_name,first_sentence,cover_i,isbn,subject,language,number_of_pages_median,first_publish_year,ratings_count,readinglog_count`;
+      console.log("OpenLibrary URL 2 (Spanish terms):", url2);
+      searches.push(fetch(url2));
     }
-
-    const data = await response.json();
     
-    if (!data.docs) return [];
-
-    return data.docs
-      .map((doc: any) => {
+    // Execute searches in parallel
+    const responses = await Promise.all(searches);
+    
+    for (const response of responses) {
+      if (!response.ok) {
+        console.error("OpenLibrary API error:", response.status);
+        continue;
+      }
+      
+      const data = await response.json();
+      if (!data.docs) continue;
+      
+      const books = data.docs.map((doc: any) => {
         const coverId = doc.cover_i;
         const languages = doc.language || [];
         
@@ -220,12 +408,18 @@ async function searchOpenLibrary(params: SearchParams): Promise<BookResult[]> {
           external_rating: doc.ratings_average || null,
           external_ratings_count: ratingsCount || null,
         };
-      })
-      // Filter to only Spanish editions
-      .filter((book: BookResult) => {
-        const lang = normalizeLanguageCode(book.language);
-        return lang === "es" || !book.language; // Include if Spanish or no language data
       });
+      
+      results.push(...books);
+    }
+    
+    // Filter to Spanish editions only (by metadata AND content validation)
+    const spanishBooks = results.filter((book: BookResult) => {
+      return isSpanishEdition(book);
+    });
+    
+    console.log(`OpenLibrary: ${results.length} raw results, ${spanishBooks.length} Spanish editions`);
+    return spanishBooks;
   } catch (error) {
     console.error("OpenLibrary search error:", error);
     return [];
