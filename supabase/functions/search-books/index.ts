@@ -41,232 +41,41 @@ interface SearchParams {
 }
 
 // ============================================
-// SMART TRANSLATION with Lovable AI
+// NO TRANSLATION - Only Spanish editions from API
 // ============================================
 
-const LANGUAGE_NAMES: Record<string, string> = {
-  es: "Spanish",
-  en: "English",
-  fr: "French",
-  de: "German",
-  pt: "Portuguese",
-  it: "Italian",
-  ca: "Catalan",
-};
-
-// Check if text contains non-Latin characters (Cyrillic, Arabic, Chinese, Japanese, Korean, etc.)
-function containsNonLatinCharacters(text: string): boolean {
-  // Regex for non-Latin scripts
-  const nonLatinRegex = /[\u0400-\u04FF]|[\u0600-\u06FF]|[\u4E00-\u9FFF]|[\u3040-\u30FF]|[\uAC00-\uD7AF]|[\u0370-\u03FF]|[\u0590-\u05FF]|[\u0900-\u097F]|[\u0E00-\u0E7F]/;
-  return nonLatinRegex.test(text);
-}
-
-// Check if title looks like a proper name or recognized work that shouldn't be translated
-function shouldNotTranslateTitle(title: string): boolean {
-  // Common patterns that indicate proper names or brand-like titles
-  const properNamePatterns = [
-    /^[A-Z][a-z]+ [A-Z][a-z]+$/, // "Harry Potter", "Don Quijote"
-    /^(The |El |La |Le |Der |Das |Il |O )?[A-Z][a-z]+ (of|de|del|di|du|von|of the) /i, // "Lord of the Rings"
-  ];
+// Normalize language codes for comparison
+function normalizeLanguageCode(lang: string | null): string | null {
+  if (!lang) return null;
   
-  // If it's very short (1-2 words) and all Latin, likely a proper name
-  const words = title.trim().split(/\s+/);
-  if (words.length <= 2 && !containsNonLatinCharacters(title)) {
-    return true;
-  }
-  
-  return properNamePatterns.some(pattern => pattern.test(title));
-}
-
-interface TranslationResult {
-  index: number;
-  title: string;
-  description: string | null;
-  genres: string[];
-}
-
-async function translateBookBatch(
-  books: BookResult[],
-  targetLanguage: string
-): Promise<BookResult[]> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  
-  if (!LOVABLE_API_KEY) {
-    console.log("LOVABLE_API_KEY not configured, skipping translation");
-    return books;
-  }
-
-  // Normalize language codes for comparison
   const normalizedLang: Record<string, string> = {
-    "spa": "es", "eng": "en", "fre": "fr", "ger": "de", 
-    "por": "pt", "ita": "it", "cat": "ca",
-    "spanish": "es", "english": "en", "french": "fr", "german": "de",
-    "portuguese": "pt", "italian": "it", "catalan": "ca"
+    "spa": "es", "spanish": "es",
+    "eng": "en", "english": "en",
+    "fre": "fr", "french": "fr", "fra": "fr",
+    "ger": "de", "german": "de", "deu": "de",
+    "por": "pt", "portuguese": "pt",
+    "ita": "it", "italian": "it",
+    "cat": "ca", "catalan": "ca"
   };
-
-  const normalizeBookLanguage = (lang: string | null): string | null => {
-    if (!lang) return null;
-    const lowerLang = lang.toLowerCase();
-    // Try 3-letter code first
-    if (normalizedLang[lowerLang.substring(0, 3)]) {
-      return normalizedLang[lowerLang.substring(0, 3)];
-    }
-    // Try full word
-    if (normalizedLang[lowerLang]) {
-      return normalizedLang[lowerLang];
-    }
-    // Fall back to first 2 chars
-    return lowerLang.substring(0, 2);
-  };
-
-  // TRANSLATE all titles/descriptions from different languages
-  // Always keep original title for display below
-  const booksToTranslate: { book: BookResult; originalIndex: number; translateTitle: boolean }[] = [];
   
-  for (let i = 0; i < books.length && booksToTranslate.length < 8; i++) {
-    const book = books[i];
-    const bookLang = normalizeBookLanguage(book.language);
-    
-    // Check if language is different from target
-    const isDifferentLang = bookLang && bookLang !== targetLanguage;
-    
-    // Skip proper names (short titles 1-2 words that are clearly names)
-    const isProperName = shouldNotTranslateTitle(book.title);
-    
-    if (isDifferentLang) {
-      booksToTranslate.push({ 
-        book, 
-        originalIndex: i,
-        translateTitle: !isProperName // Translate title unless it's a proper name
-      });
-    }
+  const lowerLang = lang.toLowerCase();
+  
+  // Try 3-letter code first
+  if (normalizedLang[lowerLang.substring(0, 3)]) {
+    return normalizedLang[lowerLang.substring(0, 3)];
   }
-
-  if (booksToTranslate.length === 0) {
-    console.log("No books need translation");
-    return books;
+  // Try full word
+  if (normalizedLang[lowerLang]) {
+    return normalizedLang[lowerLang];
   }
+  // Fall back to first 2 chars
+  return lowerLang.substring(0, 2);
+}
 
-  console.log(`Translating ${booksToTranslate.length} books to ${targetLanguage}`);
-
-  try {
-    // Prepare translation request - only include titles that need translation
-    const booksData = booksToTranslate.map(({ book, translateTitle }, index) => ({
-      i: index,
-      t: translateTitle ? book.title : null, // Only include title if it needs translation
-      d: book.description ? book.description.substring(0, 200) : null,
-    }));
-
-    const targetLangName = LANGUAGE_NAMES[targetLanguage] || "Spanish";
-
-    // Add timeout to prevent slow responses
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system",
-            content: `Translate book titles and descriptions to ${targetLangName}. 
-RULES:
-- If "t" is null, don't include it in output
-- NEVER translate author names
-- NEVER translate publisher names
-- Keep proper nouns as-is (character names, place names)
-- For non-Latin script titles, provide a readable translation
-Return ONLY a JSON array.`
-          },
-          {
-            role: "user",
-            content: `Translate to ${targetLangName}. Return JSON array only, no markdown:
-${JSON.stringify(booksData)}
-
-Format: [{"i":0,"t":"translated title or null","d":"translated desc or null"}]`
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 1500,
-      }),
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      console.error("Translation API error:", response.status);
-      return books;
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      console.error("No translation content received");
-      return books;
-    }
-
-    // Parse the JSON response with better error handling
-    let translations: { i: number; t: string | null; d: string | null }[];
-    try {
-      // Remove markdown code blocks if present
-      let cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
-      
-      // Find the array bounds
-      const startIdx = cleanContent.indexOf('[');
-      const endIdx = cleanContent.lastIndexOf(']');
-      
-      if (startIdx !== -1 && endIdx > startIdx) {
-        cleanContent = cleanContent.substring(startIdx, endIdx + 1);
-      }
-      
-      translations = JSON.parse(cleanContent);
-    } catch (parseError) {
-      console.error("Failed to parse translation response");
-      return books;
-    }
-
-    // Create result array
-    const result = [...books];
-    
-    for (const t of translations) {
-      if (typeof t.i !== 'number' || t.i >= booksToTranslate.length) continue;
-      
-      const { book, originalIndex, translateTitle } = booksToTranslate[t.i];
-      
-      // Apply title translation if we requested it AND got a valid translation
-      const newTitle = (translateTitle && t.t) ? t.t : book.title;
-      const wasTranslated = translateTitle && t.t && t.t !== book.title;
-      
-      result[originalIndex] = {
-        ...book,
-        // ALWAYS keep original title for display below translated title
-        original_title: book.title,
-        original_description: book.description ?? undefined,
-        // Use translated title if available
-        title: newTitle,
-        description: t.d || book.description,
-        // Mark as translated if title or description changed
-        translated: wasTranslated || (t.d && t.d !== book.description) ? true : undefined,
-      };
-    }
-
-    console.log(`Successfully processed ${translations.length} books`);
-    return result;
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      console.log("Translation timed out, returning original books");
-    } else {
-      console.error("Translation error:", error);
-    }
-    return books;
-  }
+// Check if a book is in Spanish
+function isSpanishEdition(book: { language: string | null }): boolean {
+  const lang = normalizeLanguageCode(book.language);
+  return lang === "es" || lang === "spa";
 }
 
 // ============================================
@@ -277,43 +86,26 @@ async function searchGoogleBooks(params: SearchParams): Promise<BookResult[]> {
   try {
     let searchQuery = params.query || "";
     
-    // Add author filter to query using intitle: if we have a query, otherwise just author
+    // Add author filter to query
     if (params.author) {
       searchQuery += (searchQuery ? " " : "") + `inauthor:${params.author}`;
     }
     
-    // Add genre/subject filter - Google doesn't have strict subject filter, 
-    // so we add it as a term in the query
+    // Add genre/subject filter
     if (params.genre) {
       searchQuery += (searchQuery ? " " : "") + `subject:${params.genre}`;
     }
     
-    // If no query but we have language filter, use a broad term to get results
+    // If no query, use a broad term to get results
     if (!searchQuery.trim()) {
-      if (params.language && params.language !== "all") {
-        // Use a common search term based on language to get popular books
-        const langTerms: Record<string, string> = {
-          "es": "literatura novela", "en": "novel fiction", "fr": "roman litterature",
-          "de": "roman literatur", "pt": "romance literatura", "it": "romanzo letteratura"
-        };
-        searchQuery = langTerms[params.language] || "fiction";
-      } else {
-        return [];
-      }
+      searchQuery = "literatura novela";
     }
     
-    // Build URL with language restriction if provided - request more results to filter later
-    let url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=30&orderBy=relevance`;
+    // ALWAYS restrict to Spanish editions using langRestrict=es
+    // This ensures only books with Spanish content are returned
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=35&orderBy=relevance&langRestrict=es`;
     
-    // Apply strict language restriction if user has specified a language
-    if (params.language && params.language !== "all") {
-      url += `&langRestrict=${params.language}`;
-    } else if (params.userLanguage) {
-      // Use user's browser language as preference (not strict filter)
-      url += `&langRestrict=${params.userLanguage}`;
-    }
-    
-    console.log("Google Books URL:", url);
+    console.log("Google Books URL (Spanish only):", url);
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -325,31 +117,34 @@ async function searchGoogleBooks(params: SearchParams): Promise<BookResult[]> {
     
     if (!data.items) return [];
 
-    return data.items.map((item: any) => {
-      const info = item.volumeInfo || {};
-      const identifiers = info.industryIdentifiers || [];
-      
-      // Filter out country-based categories
-      const rawGenres = info.categories || [];
-      
-      return {
-        title: info.title || "",
-        authors: info.authors || [],
-        description: info.description || null,
-        cover_url: info.imageLinks?.thumbnail?.replace("http://", "https://") || 
-                   info.imageLinks?.smallThumbnail?.replace("http://", "https://") || null,
-        isbn10: identifiers.find((id: any) => id.type === "ISBN_10")?.identifier || null,
-        isbn13: identifiers.find((id: any) => id.type === "ISBN_13")?.identifier || null,
-        genres: rawGenres, // Will be filtered later
-        language: info.language || null,
-        page_count: info.pageCount || null,
-        published_year: info.publishedDate ? parseInt(info.publishedDate.substring(0, 4)) : null,
-        source: "google_books",
-        // Add ratings data from Google
-        external_rating: info.averageRating || null,
-        external_ratings_count: info.ratingsCount || null,
-      };
-    });
+    return data.items
+      .map((item: any) => {
+        const info = item.volumeInfo || {};
+        const identifiers = info.industryIdentifiers || [];
+        const rawGenres = info.categories || [];
+        
+        return {
+          title: info.title || "",
+          authors: info.authors || [],
+          description: info.description || null,
+          cover_url: info.imageLinks?.thumbnail?.replace("http://", "https://") || 
+                     info.imageLinks?.smallThumbnail?.replace("http://", "https://") || null,
+          isbn10: identifiers.find((id: any) => id.type === "ISBN_10")?.identifier || null,
+          isbn13: identifiers.find((id: any) => id.type === "ISBN_13")?.identifier || null,
+          genres: rawGenres,
+          language: info.language || null,
+          page_count: info.pageCount || null,
+          published_year: info.publishedDate ? parseInt(info.publishedDate.substring(0, 4)) : null,
+          source: "google_books",
+          external_rating: info.averageRating || null,
+          external_ratings_count: info.ratingsCount || null,
+        };
+      })
+      // Double-check: only return books marked as Spanish
+      .filter((book: BookResult) => {
+        const lang = normalizeLanguageCode(book.language);
+        return lang === "es" || !book.language; // Include if Spanish or no language data
+      });
   } catch (error) {
     console.error("Google Books search error:", error);
     return [];
@@ -370,32 +165,23 @@ async function searchOpenLibrary(params: SearchParams): Promise<BookResult[]> {
       searchQuery += (searchQuery ? " " : "") + `subject:${params.genre}`;
     }
     
-    // Add language filter directly in query for better filtering
-    // OpenLibrary uses ISO 639-2/3 language codes (spa, eng, fre, etc.)
-    if (params.language && params.language !== "all") {
-      const langMap: Record<string, string> = {
-        "es": "spa", "en": "eng", "fr": "fre", "de": "ger", 
-        "pt": "por", "it": "ita", "ca": "cat"
-      };
-      const olLangCode = langMap[params.language] || params.language;
-      searchQuery += (searchQuery ? " " : "") + `language:${olLangCode}`;
-    }
+    // ALWAYS add Spanish language filter to get Spanish editions
+    searchQuery += (searchQuery ? " " : "") + `language:spa`;
     
     // Add year range filter if specified
     if (params.yearMin !== undefined && params.yearMax !== undefined) {
       searchQuery += (searchQuery ? " " : "") + `first_publish_year:[${params.yearMin} TO ${params.yearMax}]`;
     }
     
-    // If still no query, try with a broad term
-    if (!searchQuery.trim()) {
-      // OpenLibrary requires some query, so we skip if truly empty
-      return [];
+    // If still no base query, add a broad term
+    if (!params.query && !params.author && !params.genre) {
+      searchQuery = "literatura " + searchQuery;
     }
     
     // Use fields parameter to get more complete data
-    let url = `https://openlibrary.org/search.json?q=${encodeURIComponent(searchQuery)}&limit=25&fields=key,title,author_name,first_sentence,cover_i,isbn,subject,language,number_of_pages_median,first_publish_year,ratings_count,readinglog_count`;
+    const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(searchQuery)}&limit=30&fields=key,title,author_name,first_sentence,cover_i,isbn,subject,language,number_of_pages_median,first_publish_year,ratings_count,readinglog_count`;
     
-    console.log("OpenLibrary URL:", url);
+    console.log("OpenLibrary URL (Spanish only):", url);
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -407,35 +193,39 @@ async function searchOpenLibrary(params: SearchParams): Promise<BookResult[]> {
     
     if (!data.docs) return [];
 
-    return data.docs.map((doc: any) => {
-      const coverId = doc.cover_i;
-      const languages = doc.language || [];
-      
-      // Use popularity metrics for later scoring
-      const ratingsCount = doc.ratings_count || 0;
-      const readinglogCount = doc.readinglog_count || 0;
-      
-      return {
-        title: doc.title || "",
-        authors: doc.author_name || [],
-        description: doc.first_sentence ? 
-          (Array.isArray(doc.first_sentence) ? doc.first_sentence.join(" ") : doc.first_sentence) 
-          : null,
-        cover_url: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : null,
-        isbn10: doc.isbn?.find((i: string) => i.length === 10) || null,
-        isbn13: doc.isbn?.find((i: string) => i.length === 13) || null,
-        genres: doc.subject?.slice(0, 8) || [], // Get more, will filter later
-        language: languages[0] || null,
-        page_count: doc.number_of_pages_median || null,
-        published_year: doc.first_publish_year || null,
-        source: "open_library",
-        // Add popularity data for relevance scoring
-        popularity_score: ratingsCount + (readinglogCount * 0.1),
-        // OpenLibrary has ratings too
-        external_rating: doc.ratings_average || null,
-        external_ratings_count: ratingsCount || null,
-      };
-    });
+    return data.docs
+      .map((doc: any) => {
+        const coverId = doc.cover_i;
+        const languages = doc.language || [];
+        
+        // Use popularity metrics for later scoring
+        const ratingsCount = doc.ratings_count || 0;
+        const readinglogCount = doc.readinglog_count || 0;
+        
+        return {
+          title: doc.title || "",
+          authors: doc.author_name || [],
+          description: doc.first_sentence ? 
+            (Array.isArray(doc.first_sentence) ? doc.first_sentence.join(" ") : doc.first_sentence) 
+            : null,
+          cover_url: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : null,
+          isbn10: doc.isbn?.find((i: string) => i.length === 10) || null,
+          isbn13: doc.isbn?.find((i: string) => i.length === 13) || null,
+          genres: doc.subject?.slice(0, 8) || [],
+          language: languages[0] || null,
+          page_count: doc.number_of_pages_median || null,
+          published_year: doc.first_publish_year || null,
+          source: "open_library",
+          popularity_score: ratingsCount + (readinglogCount * 0.1),
+          external_rating: doc.ratings_average || null,
+          external_ratings_count: ratingsCount || null,
+        };
+      })
+      // Filter to only Spanish editions
+      .filter((book: BookResult) => {
+        const lang = normalizeLanguageCode(book.language);
+        return lang === "es" || !book.language; // Include if Spanish or no language data
+      });
   } catch (error) {
     console.error("OpenLibrary search error:", error);
     return [];
@@ -848,19 +638,13 @@ serve(async (req) => {
     // Sort by relevance score (highest first)
     scoredResults.sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));
     
-    // Take top 15 results (translation is limited to first 8 non-matching language)
+    // Take top 15 results - NO translation needed, only Spanish editions from API
     const topResults = scoredResults.slice(0, 15);
     
-    // PHASE 5: Translate books to user's language (with timeout protection)
-    let translatedResults: BookResult[] = topResults;
-    if (params.userLanguage) {
-      const targetLang = params.userLanguage.toLowerCase().substring(0, 2);
-      translatedResults = await translateBookBatch(topResults, targetLang);
-      console.log(`Translated ${translatedResults.filter(b => b.translated).length} books to ${targetLang}`);
-    }
+    console.log(`Returning ${topResults.length} Spanish edition results`);
     
     // Remove the internal scores from the final output
-    const finalResults = translatedResults.map(({ relevance_score, popularity_score, found_in_both, ...book }) => book);
+    const finalResults = topResults.map(({ relevance_score, popularity_score, found_in_both, ...book }) => book);
 
     return new Response(
       JSON.stringify({ 
@@ -871,7 +655,7 @@ serve(async (req) => {
             google_books: google.length,
             open_library: openLib.length
           },
-          translated: translatedResults.filter(b => b.translated).length
+          spanish_only: true
         }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
