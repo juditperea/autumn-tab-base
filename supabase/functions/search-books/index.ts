@@ -72,17 +72,40 @@ async function translateBookBatch(
     return books;
   }
 
+  // Normalize language codes for comparison
+  const normalizedLang: Record<string, string> = {
+    "spa": "es", "eng": "en", "fre": "fr", "ger": "de", 
+    "por": "pt", "ita": "it", "cat": "ca",
+    "spanish": "es", "english": "en", "french": "fr", "german": "de",
+    "portuguese": "pt", "italian": "it", "catalan": "ca"
+  };
+
+  const normalizeBookLanguage = (lang: string | null): string | null => {
+    if (!lang) return null;
+    const lowerLang = lang.toLowerCase();
+    // Try 3-letter code first
+    if (normalizedLang[lowerLang.substring(0, 3)]) {
+      return normalizedLang[lowerLang.substring(0, 3)];
+    }
+    // Try full word
+    if (normalizedLang[lowerLang]) {
+      return normalizedLang[lowerLang];
+    }
+    // Fall back to first 2 chars
+    return lowerLang.substring(0, 2);
+  };
+
   // Filter books that need translation (different language from target)
-  const booksToTranslate = books.filter(book => {
-    if (!book.language) return false;
-    const bookLang = book.language.toLowerCase().substring(0, 2);
-    const normalizedLang: Record<string, string> = {
-      "spa": "es", "eng": "en", "fre": "fr", "ger": "de", 
-      "por": "pt", "ita": "it", "cat": "ca"
-    };
-    const normalizedBookLang = normalizedLang[book.language.toLowerCase().substring(0, 3)] || bookLang;
-    return normalizedBookLang !== targetLanguage;
-  });
+  // Only translate first 8 books to keep response fast
+  const booksToTranslate: { book: BookResult; originalIndex: number }[] = [];
+  
+  for (let i = 0; i < books.length && booksToTranslate.length < 8; i++) {
+    const book = books[i];
+    const bookLang = normalizeBookLanguage(book.language);
+    if (bookLang && bookLang !== targetLanguage) {
+      booksToTranslate.push({ book, originalIndex: i });
+    }
+  }
 
   if (booksToTranslate.length === 0) {
     console.log("No books need translation");
@@ -92,15 +115,18 @@ async function translateBookBatch(
   console.log(`Translating ${booksToTranslate.length} books to ${targetLanguage}`);
 
   try {
-    // Prepare batch translation request
-    const booksData = booksToTranslate.map((book, index) => ({
-      index,
-      title: book.title,
-      description: book.description?.substring(0, 500) || null, // Limit description length
-      genres: book.genres.slice(0, 5),
+    // Prepare simpler translation request - just titles and short descriptions
+    const booksData = booksToTranslate.map(({ book }, index) => ({
+      i: index, // shorter key name
+      t: book.title,
+      d: book.description ? book.description.substring(0, 200) : null, // Much shorter descriptions
     }));
 
     const targetLangName = LANGUAGE_NAMES[targetLanguage] || "Spanish";
+
+    // Add timeout to prevent slow responses
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -108,28 +134,28 @@ async function translateBookBatch(
         "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
+      signal: controller.signal,
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-lite",
         messages: [
           {
             role: "system",
-            content: `You are a professional translator specializing in books and literature. Translate book metadata to ${targetLangName}. Keep proper nouns, author names, and series names in their original form unless they have well-known translations. Be concise and accurate.`
+            content: `Translate book titles and descriptions to ${targetLangName}. Keep author names unchanged. Return ONLY a JSON array.`
           },
           {
             role: "user",
-            content: `Translate the following book data to ${targetLangName}. Return ONLY valid JSON array with the translations, keeping the same structure and indices.
+            content: `Translate to ${targetLangName}. Return JSON array only, no markdown:
+${JSON.stringify(booksData)}
 
-Books to translate:
-${JSON.stringify(booksData, null, 2)}
-
-Return format (JSON array only, no markdown):
-[{"index": 0, "title": "translated title", "description": "translated description or null", "genres": ["translated genre 1", "translated genre 2"]}]`
+Format: [{"i":0,"t":"title","d":"desc or null"}]`
           }
         ],
-        temperature: 0.3,
-        max_tokens: 2000,
+        temperature: 0.2,
+        max_tokens: 1500,
       }),
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.error("Translation API error:", response.status);
@@ -144,49 +170,70 @@ Return format (JSON array only, no markdown):
       return books;
     }
 
-    // Parse the JSON response
-    let translations: TranslationResult[];
+    // Parse the JSON response with better error handling
+    let translations: { i: number; t: string; d: string | null }[];
     try {
       // Remove markdown code blocks if present
-      const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+      let cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+      
+      // Try to fix common JSON issues
+      // Find the array bounds
+      const startIdx = cleanContent.indexOf('[');
+      const endIdx = cleanContent.lastIndexOf(']');
+      
+      if (startIdx !== -1 && endIdx > startIdx) {
+        cleanContent = cleanContent.substring(startIdx, endIdx + 1);
+      }
+      
       translations = JSON.parse(cleanContent);
     } catch (parseError) {
-      console.error("Failed to parse translation response:", parseError, content);
-      return books;
+      console.error("Failed to parse translation response, trying fallback...");
+      // Try to extract individual translations manually
+      try {
+        const matches = content.matchAll(/"i"\s*:\s*(\d+)\s*,\s*"t"\s*:\s*"([^"]+)"/g);
+        translations = [];
+        for (const match of matches) {
+          translations.push({
+            i: parseInt(match[1]),
+            t: match[2],
+            d: null
+          });
+        }
+        if (translations.length === 0) {
+          console.error("Fallback parsing also failed");
+          return books;
+        }
+      } catch {
+        return books;
+      }
     }
 
-    // Create a map of translations by original book index
-    const translationMap = new Map<number, TranslationResult>();
+    // Create result array
+    const result = [...books];
+    
     for (const t of translations) {
-      if (typeof t.index === 'number') {
-        translationMap.set(t.index, t);
-      }
-    }
-
-    // Apply translations to the original books array
-    return books.map(book => {
-      const bookIndex = booksToTranslate.indexOf(book);
-      if (bookIndex === -1) {
-        return book; // Book didn't need translation
-      }
-
-      const translation = translationMap.get(bookIndex);
-      if (!translation) {
-        return book; // No translation available
-      }
-
-      return {
+      if (typeof t.i !== 'number' || t.i >= booksToTranslate.length) continue;
+      
+      const { book, originalIndex } = booksToTranslate[t.i];
+      
+      result[originalIndex] = {
         ...book,
         original_title: book.title,
         original_description: book.description ?? undefined,
-        title: translation.title || book.title,
-        description: translation.description || book.description,
-        genres: translation.genres?.length > 0 ? translation.genres : book.genres,
+        title: t.t || book.title,
+        description: t.d || book.description,
         translated: true,
       };
-    });
+    }
+
+    console.log(`Successfully translated ${translations.length} books`);
+    return result;
   } catch (error) {
-    console.error("Translation error:", error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log("Translation timed out, returning original books");
+    } else {
+      console.error("Translation error:", error);
+    }
     return books; // Return original books on error
   }
 }
@@ -770,10 +817,10 @@ serve(async (req) => {
     // Sort by relevance score (highest first)
     scoredResults.sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));
     
-    // Take top 20 results before translation to limit API calls
-    const topResults = scoredResults.slice(0, 20);
+    // Take top 15 results (translation is limited to first 8 non-matching language)
+    const topResults = scoredResults.slice(0, 15);
     
-    // PHASE 5: Translate books to user's language
+    // PHASE 5: Translate books to user's language (with timeout protection)
     let translatedResults: BookResult[] = topResults;
     if (params.userLanguage) {
       const targetLang = params.userLanguage.toLowerCase().substring(0, 2);
