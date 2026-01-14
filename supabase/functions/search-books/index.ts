@@ -23,6 +23,10 @@ interface BookResult {
   // External ratings data (for display orientation, not integration)
   external_rating?: number | null;
   external_ratings_count?: number | null;
+  // Original values before translation
+  original_title?: string;
+  original_description?: string;
+  translated?: boolean;
 }
 
 interface SearchParams {
@@ -34,6 +38,157 @@ interface SearchParams {
   yearMax?: number;
   language?: string;
   userLanguage?: string;
+}
+
+// ============================================
+// TRANSLATION with Lovable AI
+// ============================================
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  es: "Spanish",
+  en: "English",
+  fr: "French",
+  de: "German",
+  pt: "Portuguese",
+  it: "Italian",
+  ca: "Catalan",
+};
+
+interface TranslationResult {
+  index: number;
+  title: string;
+  description: string | null;
+  genres: string[];
+}
+
+async function translateBookBatch(
+  books: BookResult[],
+  targetLanguage: string
+): Promise<BookResult[]> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  
+  if (!LOVABLE_API_KEY) {
+    console.log("LOVABLE_API_KEY not configured, skipping translation");
+    return books;
+  }
+
+  // Filter books that need translation (different language from target)
+  const booksToTranslate = books.filter(book => {
+    if (!book.language) return false;
+    const bookLang = book.language.toLowerCase().substring(0, 2);
+    const normalizedLang: Record<string, string> = {
+      "spa": "es", "eng": "en", "fre": "fr", "ger": "de", 
+      "por": "pt", "ita": "it", "cat": "ca"
+    };
+    const normalizedBookLang = normalizedLang[book.language.toLowerCase().substring(0, 3)] || bookLang;
+    return normalizedBookLang !== targetLanguage;
+  });
+
+  if (booksToTranslate.length === 0) {
+    console.log("No books need translation");
+    return books;
+  }
+
+  console.log(`Translating ${booksToTranslate.length} books to ${targetLanguage}`);
+
+  try {
+    // Prepare batch translation request
+    const booksData = booksToTranslate.map((book, index) => ({
+      index,
+      title: book.title,
+      description: book.description?.substring(0, 500) || null, // Limit description length
+      genres: book.genres.slice(0, 5),
+    }));
+
+    const targetLangName = LANGUAGE_NAMES[targetLanguage] || "Spanish";
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional translator specializing in books and literature. Translate book metadata to ${targetLangName}. Keep proper nouns, author names, and series names in their original form unless they have well-known translations. Be concise and accurate.`
+          },
+          {
+            role: "user",
+            content: `Translate the following book data to ${targetLangName}. Return ONLY valid JSON array with the translations, keeping the same structure and indices.
+
+Books to translate:
+${JSON.stringify(booksData, null, 2)}
+
+Return format (JSON array only, no markdown):
+[{"index": 0, "title": "translated title", "description": "translated description or null", "genres": ["translated genre 1", "translated genre 2"]}]`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 2000,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Translation API error:", response.status);
+      return books;
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      console.error("No translation content received");
+      return books;
+    }
+
+    // Parse the JSON response
+    let translations: TranslationResult[];
+    try {
+      // Remove markdown code blocks if present
+      const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+      translations = JSON.parse(cleanContent);
+    } catch (parseError) {
+      console.error("Failed to parse translation response:", parseError, content);
+      return books;
+    }
+
+    // Create a map of translations by original book index
+    const translationMap = new Map<number, TranslationResult>();
+    for (const t of translations) {
+      if (typeof t.index === 'number') {
+        translationMap.set(t.index, t);
+      }
+    }
+
+    // Apply translations to the original books array
+    return books.map(book => {
+      const bookIndex = booksToTranslate.indexOf(book);
+      if (bookIndex === -1) {
+        return book; // Book didn't need translation
+      }
+
+      const translation = translationMap.get(bookIndex);
+      if (!translation) {
+        return book; // No translation available
+      }
+
+      return {
+        ...book,
+        original_title: book.title,
+        original_description: book.description ?? undefined,
+        title: translation.title || book.title,
+        description: translation.description || book.description,
+        genres: translation.genres?.length > 0 ? translation.genres : book.genres,
+        translated: true,
+      };
+    });
+  } catch (error) {
+    console.error("Translation error:", error);
+    return books; // Return original books on error
+  }
 }
 
 // ============================================
@@ -615,18 +770,30 @@ serve(async (req) => {
     // Sort by relevance score (highest first)
     scoredResults.sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));
     
-    // Remove the score from the final output (optional - could be useful for debugging)
-    const finalResults = scoredResults.map(({ relevance_score, ...book }) => book);
+    // Take top 20 results before translation to limit API calls
+    const topResults = scoredResults.slice(0, 20);
+    
+    // PHASE 5: Translate books to user's language
+    let translatedResults: BookResult[] = topResults;
+    if (params.userLanguage) {
+      const targetLang = params.userLanguage.toLowerCase().substring(0, 2);
+      translatedResults = await translateBookBatch(topResults, targetLang);
+      console.log(`Translated ${translatedResults.filter(b => b.translated).length} books to ${targetLang}`);
+    }
+    
+    // Remove the internal scores from the final output
+    const finalResults = translatedResults.map(({ relevance_score, popularity_score, found_in_both, ...book }) => book);
 
     return new Response(
       JSON.stringify({ 
-        results: finalResults.slice(0, 20),
+        results: finalResults,
         meta: {
-          total: finalResults.length,
+          total: scoredResults.length,
           sources: {
             google_books: google.length,
             open_library: openLib.length
-          }
+          },
+          translated: translatedResults.filter(b => b.translated).length
         }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

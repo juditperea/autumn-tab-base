@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, BookOpen, Calendar, Globe, Star, Check } from "lucide-react";
+import { Loader2, Plus, BookOpen, Calendar, Globe, Star, Check, Languages } from "lucide-react";
 import type { ExternalBook } from "@/hooks/useExternalBooks";
 import { useAddExternalBook } from "@/hooks/useExternalBooks";
 import { useNavigate } from "react-router-dom";
@@ -195,9 +195,16 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
         )}
         
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground mb-1 line-clamp-2 hover:text-primary transition-colors">
-            {book.title}
-          </h3>
+          <div className="flex items-start gap-2">
+            <h3 className="font-semibold text-foreground mb-1 line-clamp-2 hover:text-primary transition-colors flex-1">
+              {book.title}
+            </h3>
+            {book.translated && (
+              <span className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full flex-shrink-0" title={`Original: ${book.original_title}`}>
+                <Languages className="w-3 h-3" />
+              </span>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground mb-2">
             {book.authors.join(", ")}
           </p>
