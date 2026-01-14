@@ -126,6 +126,30 @@ export type Database = {
         }
         Relationships: []
       }
+      favorite_books: {
+        Row: {
+          book_id: string
+          created_at: string
+          id: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          id?: string
+          position: number
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       follows: {
         Row: {
           created_at: string
@@ -170,6 +194,9 @@ export type Database = {
           full_name: string | null
           id: string
           locale: string | null
+          reading_goal: number | null
+          reading_goal_year: number | null
+          theme_color: string | null
           updated_at: string
           username: string
         }
@@ -180,6 +207,9 @@ export type Database = {
           full_name?: string | null
           id: string
           locale?: string | null
+          reading_goal?: number | null
+          reading_goal_year?: number | null
+          theme_color?: string | null
           updated_at?: string
           username: string
         }
@@ -190,6 +220,9 @@ export type Database = {
           full_name?: string | null
           id?: string
           locale?: string | null
+          reading_goal?: number | null
+          reading_goal_year?: number | null
+          theme_color?: string | null
           updated_at?: string
           username?: string
         }
