@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -80,17 +81,22 @@ export const ReviewComments = ({ reviewId }: ReviewCommentsProps) => {
                 <div className="space-y-3">
                   {comments.map((comment) => (
                     <div key={comment.id} className="flex gap-2">
-                      <Avatar className="w-7 h-7 flex-shrink-0">
-                        <AvatarImage src={comment.profile?.avatar_url ?? undefined} />
-                        <AvatarFallback className="text-xs">
-                          {comment.profile?.username?.charAt(0).toUpperCase() ?? "?"}
-                        </AvatarFallback>
-                      </Avatar>
+                      <Link to={`/perfil/${comment.profile?.username}`}>
+                        <Avatar className="w-7 h-7 flex-shrink-0 hover:ring-2 hover:ring-primary transition-all">
+                          <AvatarImage src={comment.profile?.avatar_url ?? undefined} />
+                          <AvatarFallback className="text-xs">
+                            {comment.profile?.username?.charAt(0).toUpperCase() ?? "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Link>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground">
+                          <Link 
+                            to={`/perfil/${comment.profile?.username}`}
+                            className="text-sm font-medium text-foreground hover:underline"
+                          >
                             {comment.profile?.full_name || comment.profile?.username}
-                          </span>
+                          </Link>
                           <span className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(comment.created_at), {
                               addSuffix: true,

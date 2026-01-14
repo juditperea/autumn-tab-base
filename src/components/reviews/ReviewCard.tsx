@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,17 +39,21 @@ export const ReviewCard = ({ review, showBookInfo = false }: ReviewCardProps) =>
     <Card className="p-4 shadow-card">
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
-        <Avatar className="w-10 h-10">
-          <AvatarImage src={review.profile?.avatar_url ?? undefined} />
-          <AvatarFallback className="gradient-autumn text-white">
-            {review.profile?.username?.charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <Link to={`/perfil/${review.profile?.username}`}>
+          <Avatar className="w-10 h-10 hover:ring-2 hover:ring-primary transition-all">
+            <AvatarImage src={review.profile?.avatar_url ?? undefined} />
+            <AvatarFallback className="gradient-autumn text-white">
+              {review.profile?.username?.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
         <div className="flex-1">
           <div className="flex items-center justify-between">
-            <h4 className="font-semibold text-foreground">
-              @{review.profile?.username}
-            </h4>
+            <Link to={`/perfil/${review.profile?.username}`} className="hover:underline">
+              <h4 className="font-semibold text-foreground">
+                @{review.profile?.username}
+              </h4>
+            </Link>
             {rating && (
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 fill-accent text-accent" />
