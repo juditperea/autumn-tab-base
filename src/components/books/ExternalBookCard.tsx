@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, BookOpen, Calendar, Globe, Star, Check, Languages } from "lucide-react";
+import { Loader2, Plus, BookOpen, Calendar, Globe, Star, Check } from "lucide-react";
 import type { ExternalBook } from "@/hooks/useExternalBooks";
 import { useAddExternalBook } from "@/hooks/useExternalBooks";
 import { useNavigate } from "react-router-dom";
@@ -200,13 +200,6 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
               <h3 className="font-semibold text-foreground mb-0.5 line-clamp-2 hover:text-primary transition-colors">
                 {book.title}
               </h3>
-              {/* Always show original title as subtitle when translated */}
-              {book.translated && book.original_title && book.original_title !== book.title && (
-                <p className="text-xs text-muted-foreground/70 italic mb-1 flex items-center gap-1">
-                  <Languages className="w-3 h-3 text-primary/60" />
-                  <span>Original: {book.original_title}</span>
-                </p>
-              )}
             </div>
           </div>
           <p className="text-sm text-muted-foreground mb-2">
