@@ -12,6 +12,7 @@ import Search from "./pages/Search";
 import Scan from "./pages/Scan";
 import Clubs from "./pages/Clubs";
 import Profile from "./pages/Profile";
+import EditProfile from "./pages/EditProfile";
 import PublicProfile from "./pages/PublicProfile";
 import UserSearch from "./pages/UserSearch";
 import Auth from "./pages/Auth";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/escanear" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
             <Route path="/clubs" element={<ProtectedRoute><Clubs /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/editar-perfil" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
             <Route path="/perfil/:username" element={<ProtectedRoute><PublicProfile /></ProtectedRoute>} />
             <Route path="/buscar-usuarios" element={<ProtectedRoute><UserSearch /></ProtectedRoute>} />
             <Route path="/libro/:id" element={<ProtectedRoute><BookDetail /></ProtectedRoute>} />

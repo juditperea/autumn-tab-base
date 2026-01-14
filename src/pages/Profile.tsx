@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, BookOpen, Target, Award, LogOut, Clock, MessageSquare } from "lucide-react";
+import { Settings, BookOpen, Target, Award, LogOut, Clock, MessageSquare, Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -122,20 +122,34 @@ const Profile = () => {
       {/* Profile Content */}
       <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
         {/* User Info */}
-        <Card className="p-6 text-center shadow-card">
-          {profile?.avatar_url ? (
-            <img 
-              src={profile.avatar_url} 
-              alt={profile.username}
-              className="w-24 h-24 mx-auto mb-4 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-24 h-24 mx-auto mb-4 rounded-full gradient-autumn flex items-center justify-center">
-              <span className="text-3xl font-bold text-white">
-                {profile?.username?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
+        <Card className="p-6 text-center shadow-card relative">
+          {/* Edit button */}
+          <Link 
+            to="/editar-perfil"
+            className="absolute top-3 right-3"
+          >
+            <Button size="icon" variant="ghost" className="rounded-full h-8 w-8">
+              <Pencil className="w-4 h-4" />
+            </Button>
+          </Link>
+
+          {/* Avatar */}
+          <div className="relative inline-block group">
+            {profile?.avatar_url ? (
+              <img 
+                src={profile.avatar_url} 
+                alt={profile.username}
+                className="w-24 h-24 mx-auto mb-4 rounded-full object-cover ring-4 ring-primary/20"
+              />
+            ) : (
+              <div className="w-24 h-24 mx-auto mb-4 rounded-full gradient-autumn flex items-center justify-center ring-4 ring-primary/20">
+                <span className="text-3xl font-bold text-white">
+                  {profile?.username?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+          </div>
+
           <h2 className="text-2xl font-bold text-foreground mb-1">
             {profile?.full_name || profile?.username}
           </h2>
