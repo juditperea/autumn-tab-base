@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera, User, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, User, Sparkles, Loader2, Smile, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfileUpdate } from "@/hooks/useProfileUpdate";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeColorPicker, getThemeGradient } from "@/components/profile/ThemeColorPicker";
+import { FavoriteBooks } from "@/components/profile/FavoriteBooks";
+import { FavoriteBookSelector } from "@/components/profile/FavoriteBookSelector";
 
 interface Profile {
   username: string;
   full_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  theme_color: string | null;
 }
 
 const EditProfile = () => {
@@ -31,7 +35,10 @@ const EditProfile = () => {
   const [formData, setFormData] = useState({
     full_name: "",
     bio: "",
+    theme_color: "orange",
   });
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState(1);
 
   useEffect(() => {
     if (user) {
@@ -52,6 +59,7 @@ const EditProfile = () => {
       setFormData({
         full_name: data.full_name || "",
         bio: data.bio || "",
+        theme_color: data.theme_color || "orange",
       });
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -69,7 +77,6 @@ const EditProfile = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast({
         variant: "destructive",
@@ -79,7 +86,6 @@ const EditProfile = () => {
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         variant: "destructive",
@@ -101,6 +107,11 @@ const EditProfile = () => {
     if (result.success) {
       navigate("/perfil");
     }
+  };
+
+  const handleAddFavorite = (position: number) => {
+    setSelectedPosition(position);
+    setSelectorOpen(true);
   };
 
   if (loading) {
@@ -137,14 +148,13 @@ const EditProfile = () => {
         <Card className="p-6 shadow-card">
           <div className="flex flex-col items-center">
             <div className="relative group">
-              <Avatar className="w-28 h-28 ring-4 ring-primary/20">
+              <Avatar className={`w-28 h-28 ring-4 ring-${formData.theme_color}-500/30`}>
                 <AvatarImage src={profile?.avatar_url ?? undefined} />
-                <AvatarFallback className="text-4xl gradient-autumn text-white">
+                <AvatarFallback className={`text-4xl bg-gradient-to-br ${getThemeGradient(formData.theme_color)} text-white`}>
                   {profile?.username?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               
-              {/* Camera overlay */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -176,6 +186,26 @@ const EditProfile = () => {
           </div>
         </Card>
 
+        {/* Favorite Books */}
+        {user && (
+          <Card className="p-6 shadow-card">
+            <div className="flex items-center gap-2 mb-4">
+              <Heart className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">
+                Libros favoritos
+              </h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Elige hasta 4 libros favoritos que se mostrarán en tu perfil (estilo Letterboxd)
+            </p>
+            <FavoriteBooks 
+              userId={user.id} 
+              isOwner={true}
+              onAddClick={handleAddFavorite}
+            />
+          </Card>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit}>
           <Card className="p-6 shadow-card space-y-5">
@@ -203,10 +233,13 @@ const EditProfile = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bio">Biografía</Label>
+              <Label htmlFor="bio" className="flex items-center gap-2">
+                <Smile className="w-4 h-4" />
+                Biografía (puedes usar emojis 🎉📚✨)
+              </Label>
               <Textarea
                 id="bio"
-                placeholder="Cuéntanos algo sobre ti y tus gustos literarios..."
+                placeholder="Cuéntanos algo sobre ti y tus gustos literarios... ✨📖"
                 value={formData.bio}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, bio: e.target.value }))
@@ -219,9 +252,16 @@ const EditProfile = () => {
               </p>
             </div>
 
+            <ThemeColorPicker
+              value={formData.theme_color}
+              onChange={(color) =>
+                setFormData((prev) => ({ ...prev, theme_color: color }))
+              }
+            />
+
             <Button
               type="submit"
-              className="w-full gradient-autumn text-white"
+              className={`w-full bg-gradient-to-r ${getThemeGradient(formData.theme_color)} text-white`}
               disabled={isUpdating}
             >
               {isUpdating ? (
@@ -243,12 +283,19 @@ const EditProfile = () => {
             Consejos
           </h3>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Usa una foto clara donde se vea tu cara</li>
-            <li>• Escribe una bio que refleje tus gustos literarios</li>
-            <li>• Tu nombre será visible en tus reseñas y actividad</li>
+            <li>• Usa emojis en tu bio para hacerla más divertida 🎉</li>
+            <li>• Elige un color que te represente</li>
+            <li>• Muestra tus 4 libros favoritos en tu perfil</li>
           </ul>
         </Card>
       </main>
+
+      {/* Favorite Book Selector Dialog */}
+      <FavoriteBookSelector
+        open={selectorOpen}
+        onOpenChange={setSelectorOpen}
+        position={selectedPosition}
+      />
     </div>
   );
 };

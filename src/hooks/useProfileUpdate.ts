@@ -8,6 +8,7 @@ interface ProfileUpdateData {
   full_name?: string;
   bio?: string;
   avatar_url?: string;
+  theme_color?: string;
 }
 
 export const useProfileUpdate = () => {
