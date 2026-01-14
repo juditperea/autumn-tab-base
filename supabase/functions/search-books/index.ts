@@ -119,39 +119,25 @@ async function translateBookBatch(
     return lowerLang.substring(0, 2);
   };
 
-  // NEW SMART LOGIC: Only translate if:
-  // 1. Title contains non-Latin characters (Cyrillic, Arabic, Chinese, etc.)
-  // 2. OR book language is different AND title is longer/complex
+  // TRANSLATE all titles/descriptions from different languages
+  // Always keep original title for display below
   const booksToTranslate: { book: BookResult; originalIndex: number; translateTitle: boolean }[] = [];
   
   for (let i = 0; i < books.length && booksToTranslate.length < 8; i++) {
     const book = books[i];
     const bookLang = normalizeBookLanguage(book.language);
     
-    // Check if title has non-Latin characters - ALWAYS translate these
-    const hasNonLatin = containsNonLatinCharacters(book.title);
-    
     // Check if language is different from target
     const isDifferentLang = bookLang && bookLang !== targetLanguage;
     
-    // For Latin-script titles in different language: only translate if it's a complex title
-    // (not a proper name or short recognizable title)
-    const shouldTranslateLatinTitle = isDifferentLang && 
-      !shouldNotTranslateTitle(book.title) &&
-      book.title.split(/\s+/).length > 3; // More than 3 words
+    // Skip proper names (short titles 1-2 words that are clearly names)
+    const isProperName = shouldNotTranslateTitle(book.title);
     
-    if (hasNonLatin || shouldTranslateLatinTitle) {
+    if (isDifferentLang) {
       booksToTranslate.push({ 
         book, 
         originalIndex: i,
-        translateTitle: hasNonLatin // Only translate title if non-Latin
-      });
-    } else if (isDifferentLang && book.description) {
-      // Different language but Latin title - only translate description
-      booksToTranslate.push({ 
-        book, 
-        originalIndex: i,
-        translateTitle: false
+        translateTitle: !isProperName // Translate title unless it's a proper name
       });
     }
   }
@@ -254,20 +240,20 @@ Format: [{"i":0,"t":"translated title or null","d":"translated desc or null"}]`
       
       const { book, originalIndex, translateTitle } = booksToTranslate[t.i];
       
-      // Only apply title translation if we requested it AND got a valid translation
+      // Apply title translation if we requested it AND got a valid translation
       const newTitle = (translateTitle && t.t) ? t.t : book.title;
       const wasTranslated = translateTitle && t.t && t.t !== book.title;
       
       result[originalIndex] = {
         ...book,
-        // Always keep original title for display
+        // ALWAYS keep original title for display below translated title
         original_title: book.title,
         original_description: book.description ?? undefined,
-        // Only change title if it was actually translated
+        // Use translated title if available
         title: newTitle,
         description: t.d || book.description,
-        // Mark as translated only if title was actually changed
-        translated: wasTranslated ? true : undefined,
+        // Mark as translated if title or description changed
+        translated: wasTranslated || (t.d && t.d !== book.description) ? true : undefined,
       };
     }
 
