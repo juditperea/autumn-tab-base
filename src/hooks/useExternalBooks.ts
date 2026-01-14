@@ -17,6 +17,10 @@ export interface ExternalBook {
   // External ratings for orientation (not integrated)
   external_rating?: number | null;
   external_ratings_count?: number | null;
+  // Translation info
+  original_title?: string;
+  original_description?: string;
+  translated?: boolean;
 }
 
 export interface SearchFilters {
