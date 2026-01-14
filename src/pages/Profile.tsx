@@ -13,6 +13,7 @@ import { useUserReviews } from "@/hooks/useReviews";
 import { RecentActivity } from "@/components/profile/RecentActivity";
 import { UserReviewsList } from "@/components/profile/UserReviewsList";
 import { FollowStats } from "@/components/social/FollowStats";
+import { FollowersModal } from "@/components/social/FollowersModal";
 import { FavoriteBooks } from "@/components/profile/FavoriteBooks";
 import { ReadingGoalCard } from "@/components/profile/ReadingGoalCard";
 import { getThemeGradient, getThemeRing } from "@/components/profile/ThemeColorPicker";
@@ -33,6 +34,8 @@ const Profile = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [followersModalOpen, setFollowersModalOpen] = useState(false);
+  const [followersModalTab, setFollowersModalTab] = useState<"followers" | "following">("followers");
 
   const bookStats = useUserBooksStats();
   const { data: userReviews } = useUserReviews(user?.id);
@@ -165,7 +168,17 @@ const Profile = () => {
           {/* Follow Stats */}
           {user && (
             <div className="flex justify-center mb-4">
-              <FollowStats userId={user.id} />
+              <FollowStats 
+                userId={user.id} 
+                onFollowersClick={() => {
+                  setFollowersModalTab("followers");
+                  setFollowersModalOpen(true);
+                }}
+                onFollowingClick={() => {
+                  setFollowersModalTab("following");
+                  setFollowersModalOpen(true);
+                }}
+              />
             </div>
           )}
           
@@ -227,6 +240,17 @@ const Profile = () => {
           <BookShelf />
         </section>
       </main>
+
+      {/* Followers Modal */}
+      {user && profile && (
+        <FollowersModal
+          userId={user.id}
+          username={profile.username}
+          open={followersModalOpen}
+          onOpenChange={setFollowersModalOpen}
+          initialTab={followersModalTab}
+        />
+      )}
     </div>
   );
 };

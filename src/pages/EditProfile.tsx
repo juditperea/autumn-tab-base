@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera, User, Sparkles, Loader2, Smile, Heart } from "lucide-react";
+import { ArrowLeft, Camera, User, Sparkles, Loader2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeColorPicker, getThemeGradient } from "@/components/profile/ThemeColorPicker";
 import { FavoriteBooks } from "@/components/profile/FavoriteBooks";
 import { FavoriteBookSelector } from "@/components/profile/FavoriteBookSelector";
+import { EmojiPicker } from "@/components/ui/emoji-picker";
 
 interface Profile {
   username: string;
@@ -196,7 +197,7 @@ const EditProfile = () => {
               </h2>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Elige hasta 4 libros favoritos que se mostrarán en tu perfil (estilo Letterboxd)
+              Elige hasta 4 libros favoritos que se mostrarán en tu perfil
             </p>
             <FavoriteBooks 
               userId={user.id} 
@@ -233,13 +234,17 @@ const EditProfile = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bio" className="flex items-center gap-2">
-                <Smile className="w-4 h-4" />
-                Biografía (puedes usar emojis 🎉📚✨)
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="bio">Biografía</Label>
+                <EmojiPicker 
+                  onEmojiSelect={(emoji) => {
+                    setFormData((prev) => ({ ...prev, bio: prev.bio + emoji }));
+                  }}
+                />
+              </div>
               <Textarea
                 id="bio"
-                placeholder="Cuéntanos algo sobre ti y tus gustos literarios... ✨📖"
+                placeholder="Cuéntanos algo sobre ti y tus gustos literarios..."
                 value={formData.bio}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, bio: e.target.value }))
