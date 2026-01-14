@@ -23,17 +23,31 @@ export const useFavoriteBooks = (userId?: string) => {
     queryFn: async () => {
       if (!userId) return [];
       
-      const { data, error } = await supabase
+      // Get favorite books
+      const { data: favorites, error: favError } = await supabase
         .from("favorite_books")
-        .select(`
-          *,
-          book:books(id, title, authors, cover_url)
-        `)
+        .select("*")
         .eq("user_id", userId)
         .order("position");
 
-      if (error) throw error;
-      return data as FavoriteBook[];
+      if (favError) throw favError;
+      if (!favorites || favorites.length === 0) return [];
+
+      // Get the book details
+      const bookIds = favorites.map(f => f.book_id);
+      const { data: books, error: booksError } = await supabase
+        .from("books")
+        .select("id, title, authors, cover_url")
+        .in("id", bookIds);
+
+      if (booksError) throw booksError;
+
+      // Combine the data
+      const booksMap = new Map(books?.map(b => [b.id, b]) ?? []);
+      return favorites.map(fav => ({
+        ...fav,
+        book: booksMap.get(fav.book_id) ?? undefined,
+      })) as FavoriteBook[];
     },
     enabled: !!userId,
   });

@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, BookOpen, Target, Award, LogOut, Clock, MessageSquare, Pencil } from "lucide-react";
+import { Settings, BookOpen, Award, LogOut, Clock, MessageSquare, Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -13,12 +13,18 @@ import { useUserReviews } from "@/hooks/useReviews";
 import { RecentActivity } from "@/components/profile/RecentActivity";
 import { UserReviewsList } from "@/components/profile/UserReviewsList";
 import { FollowStats } from "@/components/social/FollowStats";
+import { FavoriteBooks } from "@/components/profile/FavoriteBooks";
+import { ReadingGoalCard } from "@/components/profile/ReadingGoalCard";
+import { getThemeGradient, getThemeRing } from "@/components/profile/ThemeColorPicker";
 
 interface Profile {
   username: string;
   full_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  theme_color: string | null;
+  reading_goal: number | null;
+  reading_goal_year: number | null;
 }
 
 const Profile = () => {
@@ -31,14 +37,12 @@ const Profile = () => {
   const bookStats = useUserBooksStats();
   const { data: userReviews } = useUserReviews(user?.id);
 
+  const themeColor = profile?.theme_color || "orange";
+
   const stats = [{
     label: "Libros leídos",
     value: bookStats.read,
     icon: BookOpen
-  }, {
-    label: "Objetivo anual",
-    value: `${bookStats.read}/20`,
-    icon: Target
   }, {
     label: "Reseñas",
     value: userReviews?.length ?? 0,
@@ -122,7 +126,10 @@ const Profile = () => {
       {/* Profile Content */}
       <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
         {/* User Info */}
-        <Card className="p-6 text-center shadow-card relative">
+        <Card className="p-6 text-center shadow-card relative overflow-hidden">
+          {/* Decorative gradient bar */}
+          <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${getThemeGradient(themeColor)}`} />
+          
           {/* Edit button */}
           <Link 
             to="/editar-perfil"
@@ -139,10 +146,10 @@ const Profile = () => {
               <img 
                 src={profile.avatar_url} 
                 alt={profile.username}
-                className="w-24 h-24 mx-auto mb-4 rounded-full object-cover ring-4 ring-primary/20"
+                className={`w-24 h-24 mx-auto mb-4 rounded-full object-cover ring-4 ${getThemeRing(themeColor)}`}
               />
             ) : (
-              <div className="w-24 h-24 mx-auto mb-4 rounded-full gradient-autumn flex items-center justify-center ring-4 ring-primary/20">
+              <div className={`w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br ${getThemeGradient(themeColor)} flex items-center justify-center ring-4 ${getThemeRing(themeColor)}`}>
                 <span className="text-3xl font-bold text-white">
                   {profile?.username?.charAt(0).toUpperCase()}
                 </span>
@@ -162,16 +169,29 @@ const Profile = () => {
             </div>
           )}
           
-          <p className="text-sm text-foreground">
+          <p className="text-sm text-foreground whitespace-pre-wrap">
             {profile?.bio || "Sin biografía aún"}
           </p>
         </Card>
 
+        {/* Favorite Books */}
+        {user && (
+          <FavoriteBooks userId={user.id} isOwner={false} />
+        )}
+
+        {/* Reading Goal */}
+        <ReadingGoalCard
+          readingGoal={profile?.reading_goal ?? null}
+          readingGoalYear={profile?.reading_goal_year ?? null}
+          booksRead={bookStats.read}
+          isOwner={true}
+        />
+
         {/* Stats */}
-        <section className="grid grid-cols-3 gap-3">
+        <section className="grid grid-cols-2 gap-3">
           {stats.map((stat, index) => (
             <Card key={index} className="p-4 text-center shadow-card">
-              <stat.icon className="w-6 h-6 mx-auto mb-2 text-primary" />
+              <stat.icon className={`w-6 h-6 mx-auto mb-2 text-${themeColor}-500`} />
               <p className="text-2xl font-bold text-foreground mb-1">
                 {stat.value}
               </p>
