@@ -3,7 +3,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScanLine, Camera, Image, Search, AlertCircle, Loader2, BookX, Sparkles } from "lucide-react";
+import { ScanLine, Camera, Image, Search, AlertCircle, Loader2, BookX } from "lucide-react";
 import { BarcodeScanner } from "@/components/scanner/BarcodeScanner";
 import { ScanResultCard } from "@/components/scanner/ScanResultCard";
 import { useExternalBookSearch, ExternalBook } from "@/hooks/useExternalBooks";
@@ -169,8 +169,8 @@ const Scan = () => {
               </div>
             </div>
             <div className="flex items-center justify-center gap-2 text-primary">
-              <Sparkles className="w-5 h-5" />
-              <span className="font-medium">Identificando libro con IA...</span>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="font-medium">Identificando libro...</span>
             </div>
           </Card>
         )}
@@ -179,7 +179,6 @@ const Scan = () => {
         {identifiedBook && !identifiedBook.error && isSearching && (
           <Card className="p-4 border-primary/30 bg-primary/5">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-primary">Libro identificado</span>
               <Badge variant="secondary" className="text-xs">
                 {identifiedBook.confidence === "high" ? "Alta confianza" : 
@@ -242,7 +241,6 @@ const Scan = () => {
                 disabled={isLoading}
               >
                 <Image className="w-5 h-5 mr-2" />
-                <Sparkles className="w-4 h-4 mr-1 text-primary" />
                 Identificar por portada
               </Button>
               <input
@@ -300,7 +298,6 @@ const Scan = () => {
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• <strong>Código de barras:</strong> Está en la contraportada</li>
               <li>• <strong>Foto de portada:</strong> Asegura buena iluminación y que se lea el título</li>
-              <li>• La IA puede identificar libros incluso sin código de barras visible</li>
             </ul>
           </Card>
         )}
