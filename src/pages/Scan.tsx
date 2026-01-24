@@ -3,34 +3,32 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScanLine, Camera, Image, Search, AlertCircle, Loader2, BookX } from "lucide-react";
+import { ScanLine, Camera, Image, Search, AlertCircle, Loader2, BookX, Sparkles } from "lucide-react";
 import { BarcodeScanner } from "@/components/scanner/BarcodeScanner";
 import { ScanResultCard } from "@/components/scanner/ScanResultCard";
 import { useExternalBookSearch, ExternalBook } from "@/hooks/useExternalBooks";
+import { useCoverIdentification } from "@/hooks/useCoverIdentification";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 const Scan = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [manualISBN, setManualISBN] = useState("");
   const [scannedBook, setScannedBook] = useState<ExternalBook | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const { searchByISBN, isSearching, error, results, clearResults } = useExternalBookSearch();
+  const { searchByISBN, search, isSearching, error, results, clearResults } = useExternalBookSearch();
+  const { identifyFromImage, isIdentifying, error: identifyError, identifiedBook, clear: clearIdentified } = useCoverIdentification();
   const { toast } = useToast();
-
-  const handleScanResult = async (isbn: string) => {
-    setNotFound(false);
-    setScannedBook(null);
-    
-    await searchByISBN(isbn);
-  };
 
   // Effect to handle search results
   useEffect(() => {
     if (results.length > 0 && !scannedBook) {
       setScannedBook(results[0]);
       setShowScanner(false);
+      setPreviewImage(null);
       toast({
         title: "¡Libro encontrado!",
         description: `"${results[0].title}" por ${results[0].authors.join(", ")}`,
@@ -39,6 +37,26 @@ const Scan = () => {
       setNotFound(true);
     }
   }, [results, scannedBook, isSearching, error, toast]);
+
+  // Effect to search when book is identified from cover
+  useEffect(() => {
+    if (identifiedBook && !identifiedBook.error) {
+      // If we have ISBN, search by ISBN
+      if (identifiedBook.isbn) {
+        searchByISBN(identifiedBook.isbn);
+      } else {
+        // Otherwise search by title and author
+        const query = `${identifiedBook.title} ${identifiedBook.authors?.join(" ") || ""}`;
+        search(query);
+      }
+    }
+  }, [identifiedBook]);
+
+  const handleScanResult = async (isbn: string) => {
+    setNotFound(false);
+    setScannedBook(null);
+    await searchByISBN(isbn);
+  };
 
   const handleManualSearch = async () => {
     const cleaned = manualISBN.replace(/[-\s]/g, "");
@@ -60,13 +78,35 @@ const Scan = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // For now, show a message that image scanning is coming soon
-    // In the future, this could use OCR or barcode detection from images
-    toast({
-      title: "Próximamente",
-      description: "El escaneo desde imagen estará disponible pronto. Por ahora, usa la cámara o introduce el ISBN manualmente.",
-    });
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPreviewImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset states
+    setScannedBook(null);
+    setNotFound(false);
+    clearResults();
+    clearIdentified();
+
+    // Identify book from cover
+    const result = await identifyFromImage(file);
     
+    if (result?.error || !result) {
+      toast({
+        variant: "destructive",
+        title: "No se pudo identificar",
+        description: "Intenta con otra imagen más clara de la portada",
+      });
+    } else if (result.confidence === "low") {
+      toast({
+        title: "Identificación incierta",
+        description: `Posible libro: "${result.title}"`,
+      });
+    }
+
     // Reset the input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -76,16 +116,22 @@ const Scan = () => {
   const handleDismissResult = () => {
     setScannedBook(null);
     setNotFound(false);
+    setPreviewImage(null);
     clearResults();
+    clearIdentified();
     setManualISBN("");
   };
 
   const openScanner = () => {
     setScannedBook(null);
     setNotFound(false);
+    setPreviewImage(null);
     clearResults();
+    clearIdentified();
     setShowScanner(true);
   };
+
+  const isLoading = isSearching || isIdentifying;
 
   return (
     <div className="min-h-screen pb-20 bg-background">
@@ -113,15 +159,51 @@ const Scan = () => {
           <ScanResultCard book={scannedBook} onDismiss={handleDismissResult} />
         )}
 
+        {/* Identifying from image */}
+        {isIdentifying && previewImage && (
+          <Card className="p-6 text-center">
+            <div className="relative w-32 h-48 mx-auto mb-4 rounded-lg overflow-hidden">
+              <img src={previewImage} alt="Cover" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-white" />
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-primary">
+              <Sparkles className="w-5 h-5" />
+              <span className="font-medium">Identificando libro con IA...</span>
+            </div>
+          </Card>
+        )}
+
+        {/* Identified book info (before search completes) */}
+        {identifiedBook && !identifiedBook.error && isSearching && (
+          <Card className="p-4 border-primary/30 bg-primary/5">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Libro identificado</span>
+              <Badge variant="secondary" className="text-xs">
+                {identifiedBook.confidence === "high" ? "Alta confianza" : 
+                 identifiedBook.confidence === "medium" ? "Media confianza" : "Baja confianza"}
+              </Badge>
+            </div>
+            <p className="font-semibold">{identifiedBook.title}</p>
+            <p className="text-sm text-muted-foreground">{identifiedBook.authors?.join(", ")}</p>
+            <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Buscando en la base de datos...
+            </div>
+          </Card>
+        )}
+
         {/* Not Found Message */}
-        {notFound && !scannedBook && (
+        {notFound && !scannedBook && !isLoading && (
           <Card className="p-6 text-center border-destructive/30">
             <BookX className="w-12 h-12 mx-auto mb-3 text-destructive" />
             <h3 className="font-semibold text-foreground mb-2">
               Libro no encontrado
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              No pudimos encontrar un libro con ese ISBN. Intenta buscarlo por título en la pestaña Buscar.
+              No pudimos encontrar el libro. Intenta buscarlo por título en la pestaña Buscar.
             </p>
             <Button variant="outline" onClick={handleDismissResult}>
               Intentar de nuevo
@@ -130,7 +212,7 @@ const Scan = () => {
         )}
 
         {/* Main Scan Card */}
-        {!scannedBook && !notFound && (
+        {!scannedBook && !notFound && !isLoading && (
           <Card className="p-8 text-center shadow-card">
             <div className="w-20 h-20 mx-auto mb-6 rounded-full gradient-autumn flex items-center justify-center">
               <ScanLine className="w-10 h-10 text-white" />
@@ -140,35 +222,34 @@ const Scan = () => {
               Escanea tu libro
             </h2>
             <p className="text-muted-foreground mb-8">
-              Escanea el código de barras ISBN de la contraportada para añadir el libro automáticamente
+              Escanea el código de barras o sube una foto de la portada
             </p>
 
             <div className="space-y-3">
               <Button 
                 className="w-full h-12 text-base shadow-warm"
                 onClick={openScanner}
-                disabled={isSearching}
+                disabled={isLoading}
               >
-                {isSearching ? (
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                ) : (
-                  <Camera className="w-5 h-5 mr-2" />
-                )}
-                Abrir cámara
+                <Camera className="w-5 h-5 mr-2" />
+                Escanear código de barras
               </Button>
               
               <Button 
                 variant="outline" 
                 className="w-full h-12 text-base"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
               >
                 <Image className="w-5 h-5 mr-2" />
-                Subir desde galería
+                <Sparkles className="w-4 h-4 mr-1 text-primary" />
+                Identificar por portada
               </Button>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                capture="environment"
                 className="hidden"
                 onChange={handleImageUpload}
               />
@@ -177,7 +258,7 @@ const Scan = () => {
         )}
 
         {/* Manual ISBN Entry */}
-        {!scannedBook && (
+        {!scannedBook && !isLoading && (
           <Card className="p-4 shadow-card">
             <h3 className="font-medium text-foreground mb-3">
               ¿No funciona el escáner?
@@ -194,37 +275,32 @@ const Scan = () => {
               />
               <Button 
                 onClick={handleManualSearch}
-                disabled={isSearching || !manualISBN.trim()}
+                disabled={isLoading || !manualISBN.trim()}
               >
-                {isSearching ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Search className="w-4 h-4" />
-                )}
+                <Search className="w-4 h-4" />
               </Button>
             </div>
           </Card>
         )}
 
         {/* Error Message */}
-        {error && (
+        {(error || identifyError) && (
           <Card className="p-4 border-destructive/30 bg-destructive/5">
             <div className="flex items-center gap-2 text-destructive">
               <AlertCircle className="w-5 h-5" />
-              <span className="text-sm">{error}</span>
+              <span className="text-sm">{error || identifyError}</span>
             </div>
           </Card>
         )}
 
         {/* Tips */}
-        {!scannedBook && !notFound && (
+        {!scannedBook && !notFound && !isLoading && (
           <Card className="p-4 shadow-card bg-muted/50">
             <h3 className="font-medium text-foreground mb-2">Consejos:</h3>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• El código de barras está en la contraportada del libro</li>
-              <li>• Asegúrate de tener buena iluminación</li>
-              <li>• Mantén el móvil estable al enfocar</li>
-              <li>• El ISBN comienza normalmente con 978 o 979</li>
+              <li>• <strong>Código de barras:</strong> Está en la contraportada</li>
+              <li>• <strong>Foto de portada:</strong> Asegura buena iluminación y que se lea el título</li>
+              <li>• La IA puede identificar libros incluso sin código de barras visible</li>
             </ul>
           </Card>
         )}
