@@ -14,6 +14,7 @@ interface BookCardProps {
   userStatus?: ReadingStatus | null;
   userRating?: number | null;
   userBookId?: string;
+  customCoverUrl?: string | null;
   compact?: boolean;
   showQuickRating?: boolean;
 }
@@ -37,6 +38,7 @@ export const BookCard = ({
   userStatus, 
   userRating, 
   userBookId,
+  customCoverUrl,
   compact = false,
   showQuickRating = true,
 }: BookCardProps) => {
@@ -54,6 +56,7 @@ export const BookCard = ({
   
   const effectiveUserBookId = userBookId || fetchedUserBook?.id;
   const effectiveUserRating = userRating ?? fetchedUserBook?.rating ?? null;
+  const effectiveCoverUrl = customCoverUrl || fetchedUserBook?.custom_cover_url || book.cover_url;
 
   const handleQuickRate = async (rating: number) => {
     if (!user) {
@@ -90,9 +93,9 @@ export const BookCard = ({
       <Link to={`/libro/${book.id}`}>
         <Card className="p-3 shadow-card hover:shadow-warm tab-transition cursor-pointer">
           <div className="flex gap-3">
-            {book.cover_url ? (
+            {effectiveCoverUrl ? (
               <img
-                src={book.cover_url}
+                src={effectiveCoverUrl}
                 alt={book.title}
                 className="w-12 h-16 rounded-md object-cover flex-shrink-0"
               />
@@ -135,9 +138,9 @@ export const BookCard = ({
     >
       <div className="flex gap-4">
         <div className="flex-shrink-0">
-          {book.cover_url ? (
+          {effectiveCoverUrl ? (
             <img
-              src={book.cover_url}
+              src={effectiveCoverUrl}
               alt={book.title}
               className="w-20 h-28 rounded-lg object-cover"
             />

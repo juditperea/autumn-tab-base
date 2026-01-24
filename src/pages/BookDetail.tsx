@@ -16,8 +16,10 @@ import {
 import { ArrowLeft, Star, Calendar, BookOpen, Globe, Loader2, MessageSquare, ExternalLink } from "lucide-react";
 import { useBook } from "@/hooks/useBooks";
 import { useUserBookForBook, useAddToShelf, useUpdateUserBook, useRemoveFromShelf } from "@/hooks/useUserBooks";
+import { useAuth } from "@/contexts/AuthContext";
 import { StatusSelector } from "@/components/books/StatusSelector";
 import { RatingControl } from "@/components/books/RatingControl";
+import { CoverUpload } from "@/components/books/CoverUpload";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { useToast } from "@/hooks/use-toast";
 import type { ReadingStatus } from "@/hooks/useUserBooks";
@@ -80,6 +82,7 @@ const BookDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const { data: book, isLoading: bookLoading, error: bookError } = useBook(id);
   const { data: userBook, isLoading: userBookLoading } = useUserBookForBook(id);
@@ -89,6 +92,15 @@ const BookDetail = () => {
   const removeFromShelf = useRemoveFromShelf();
 
   const [showRatingDialog, setShowRatingDialog] = useState(false);
+
+  const handleCoverUploaded = async (url: string | null) => {
+    if (!userBook) return;
+    try {
+      await updateUserBook.mutateAsync({ id: userBook.id, custom_cover_url: url });
+    } catch (error) {
+      console.error("Error updating cover:", error);
+    }
+  };
 
   const handleStatusChange = async (status: ReadingStatus) => {
     try {
@@ -189,7 +201,16 @@ const BookDetail = () => {
         {/* Book Info Card */}
         <Card className="p-6 shadow-card">
           <div className="flex gap-4">
-            {book.cover_url ? (
+            {/* Cover - Show upload component if user has the book in their library */}
+            {user && userBook ? (
+              <CoverUpload
+                userId={user.id}
+                bookId={book.id}
+                currentCoverUrl={book.cover_url}
+                customCoverUrl={userBook.custom_cover_url}
+                onCoverUploaded={handleCoverUploaded}
+              />
+            ) : book.cover_url ? (
               <img
                 src={book.cover_url}
                 alt={book.title}

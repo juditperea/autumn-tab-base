@@ -105,6 +105,8 @@ export const BookShelf = ({ showTabs = true }: BookShelfProps) => {
                     }}
                     userStatus={userBook.status}
                     userRating={userBook.rating}
+                    userBookId={userBook.id}
+                    customCoverUrl={userBook.custom_cover_url}
                     compact
                   />
                 )
@@ -145,6 +147,8 @@ export const BookShelf = ({ showTabs = true }: BookShelfProps) => {
               }}
               userStatus={userBook.status}
               userRating={userBook.rating}
+              userBookId={userBook.id}
+              customCoverUrl={userBook.custom_cover_url}
               compact
             />
           )
