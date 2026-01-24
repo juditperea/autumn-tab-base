@@ -11,6 +11,7 @@ interface ImportResult {
   total: number;
   imported: number;
   skipped: number;
+  enriched: number;
   errors: string[];
 }
 
@@ -166,7 +167,7 @@ export const GoodreadsImport = () => {
           <div className="space-y-2">
             <Progress value={30} className="animate-pulse" />
             <p className="text-xs text-muted-foreground text-center">
-              Procesando libros... esto puede tardar unos segundos
+              Procesando libros y descargando metadatos... esto puede tardar un minuto
             </p>
           </div>
         )}
@@ -176,10 +177,14 @@ export const GoodreadsImport = () => {
           <div className="space-y-3">
             <Progress value={progressPercent} />
             
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
               <div className="p-2 rounded-lg bg-green-500/10">
                 <div className="text-lg font-bold text-green-600">{result.imported}</div>
                 <div className="text-xs text-muted-foreground">Importados</div>
+              </div>
+              <div className="p-2 rounded-lg bg-primary/10">
+                <div className="text-lg font-bold text-primary">{result.enriched}</div>
+                <div className="text-xs text-muted-foreground">Enriquecidos</div>
               </div>
               <div className="p-2 rounded-lg bg-yellow-500/10">
                 <div className="text-lg font-bold text-yellow-600">{result.skipped}</div>
@@ -196,7 +201,8 @@ export const GoodreadsImport = () => {
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertTitle>¡Importación completada!</AlertTitle>
                 <AlertDescription>
-                  Se han añadido {result.imported} libros a tu biblioteca. 
+                  Se han añadido {result.imported} libros a tu biblioteca
+                  {result.enriched > 0 && ` con portadas y metadatos de ${result.enriched}`}. 
                   {result.skipped > 0 && ` ${result.skipped} libros ya estaban en tu biblioteca.`}
                 </AlertDescription>
               </Alert>
