@@ -126,6 +126,171 @@ export type Database = {
         }
         Relationships: []
       }
+      club_invitations: {
+        Row: {
+          club_id: string
+          created_at: string
+          id: string
+          invited_by: string
+          invited_email: string | null
+          invited_user_id: string | null
+          status: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          id?: string
+          invited_by: string
+          invited_email?: string | null
+          invited_user_id?: string | null
+          status?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          id?: string
+          invited_by?: string
+          invited_email?: string | null
+          invited_user_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_invitations_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_members: {
+        Row: {
+          club_id: string
+          id: string
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          club_id: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          club_id?: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_members_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_messages: {
+        Row: {
+          club_id: string
+          contains_spoiler: boolean
+          content: string
+          created_at: string
+          id: string
+          reply_to_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          club_id: string
+          contains_spoiler?: boolean
+          content: string
+          created_at?: string
+          id?: string
+          reply_to_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          club_id?: string
+          contains_spoiler?: boolean
+          content?: string
+          created_at?: string
+          id?: string
+          reply_to_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_messages_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "club_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clubs: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          current_book_id: string | null
+          description: string | null
+          id: string
+          is_public: boolean
+          member_count: number
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          current_book_id?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          member_count?: number
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          current_book_id?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          member_count?: number
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clubs_current_book_id_fkey"
+            columns: ["current_book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorite_books: {
         Row: {
           book_id: string
@@ -430,7 +595,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_club_admin: {
+        Args: { _club_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_club_member: {
+        Args: { _club_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       reading_status: "to_read" | "reading" | "read" | "dnf"
