@@ -16,6 +16,7 @@ export interface UserBook {
   finished_at: string | null;
   created_at: string;
   updated_at: string;
+  custom_cover_url: string | null;
   // Joined book data
   book?: {
     id: string;
@@ -147,13 +148,15 @@ export const useUpdateUserBook = () => {
       status, 
       rating, 
       progress_percent, 
-      progress_pages 
+      progress_pages,
+      custom_cover_url,
     }: { 
       id: string;
       status?: ReadingStatus;
       rating?: number | null;
       progress_percent?: number;
       progress_pages?: number;
+      custom_cover_url?: string | null;
     }) => {
       const updates: Record<string, unknown> = {};
       
@@ -170,6 +173,7 @@ export const useUpdateUserBook = () => {
       if (rating !== undefined) updates.rating = rating;
       if (progress_percent !== undefined) updates.progress_percent = progress_percent;
       if (progress_pages !== undefined) updates.progress_pages = progress_pages;
+      if (custom_cover_url !== undefined) updates.custom_cover_url = custom_cover_url;
 
       const { data, error } = await supabase
         .from("user_books")
