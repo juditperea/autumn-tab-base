@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,24 +26,19 @@ const Scan = () => {
     await searchByISBN(isbn);
   };
 
-  // Watch for search results
-  const handleSearchComplete = () => {
-    if (results.length > 0) {
+  // Effect to handle search results
+  useEffect(() => {
+    if (results.length > 0 && !scannedBook) {
       setScannedBook(results[0]);
       setShowScanner(false);
       toast({
         title: "¡Libro encontrado!",
         description: `"${results[0].title}" por ${results[0].authors.join(", ")}`,
       });
-    } else if (!isSearching && manualISBN) {
+    } else if (results.length === 0 && !isSearching && error) {
       setNotFound(true);
     }
-  };
-
-  // Effect to handle results
-  if (results.length > 0 && !scannedBook) {
-    handleSearchComplete();
-  }
+  }, [results, scannedBook, isSearching, error, toast]);
 
   const handleManualSearch = async () => {
     const cleaned = manualISBN.replace(/[-\s]/g, "");
@@ -59,11 +54,6 @@ const Scan = () => {
     setNotFound(false);
     setScannedBook(null);
     await searchByISBN(cleaned);
-    
-    // Check results after search
-    if (results.length === 0) {
-      setNotFound(true);
-    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
