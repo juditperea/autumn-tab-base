@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, BookOpen, Award, LogOut, Clock, MessageSquare, Pencil } from "lucide-react";
+import { Settings, BookOpen, Award, LogOut, Clock, MessageSquare, Pencil, Upload } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -233,10 +233,18 @@ const Profile = () => {
 
         {/* My Books */}
         <section>
-          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-primary" />
-            Mi biblioteca
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary" />
+              Mi biblioteca
+            </h3>
+            <Link to="/importar">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Upload className="w-4 h-4" />
+                Importar
+              </Button>
+            </Link>
+          </div>
           <BookShelf />
         </section>
       </main>
