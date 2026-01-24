@@ -11,6 +11,7 @@ import Feed from "./pages/Feed";
 import Search from "./pages/Search";
 import Scan from "./pages/Scan";
 import Clubs from "./pages/Clubs";
+import ClubDetail from "./pages/ClubDetail";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import PublicProfile from "./pages/PublicProfile";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/buscar" element={<ProtectedRoute><Search /></ProtectedRoute>} />
             <Route path="/escanear" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
             <Route path="/clubs" element={<ProtectedRoute><Clubs /></ProtectedRoute>} />
+            <Route path="/club/:id" element={<ProtectedRoute><ClubDetail /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/editar-perfil" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
             <Route path="/perfil/:username" element={<ProtectedRoute><PublicProfile /></ProtectedRoute>} />
