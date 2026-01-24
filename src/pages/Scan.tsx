@@ -95,11 +95,14 @@ const Scan = () => {
     const result = await identifyFromImage(file);
     
     if (result?.error || !result) {
+      setNotFound(true);
+      setPreviewImage(null);
       toast({
         variant: "destructive",
-        title: "No se pudo identificar",
-        description: "Intenta con otra imagen más clara de la portada",
+        title: "No se pudo reconocer la portada",
+        description: "Intenta subir una imagen más clara o usa el buscador manual.",
       });
+      return;
     } else if (result.confidence === "low") {
       toast({
         title: "Identificación incierta",
@@ -199,10 +202,10 @@ const Scan = () => {
           <Card className="p-6 text-center border-destructive/30">
             <BookX className="w-12 h-12 mx-auto mb-3 text-destructive" />
             <h3 className="font-semibold text-foreground mb-2">
-              Libro no encontrado
+              No se pudo reconocer el libro
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              No pudimos encontrar el libro. Intenta buscarlo por título en la pestaña Buscar.
+              Intenta subir una imagen más clara de la portada o usa el buscador manual en la pestaña Buscar.
             </p>
             <Button variant="outline" onClick={handleDismissResult}>
               Intentar de nuevo
