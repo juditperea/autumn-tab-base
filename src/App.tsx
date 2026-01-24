@@ -17,6 +17,7 @@ import PublicProfile from "./pages/PublicProfile";
 import UserSearch from "./pages/UserSearch";
 import Auth from "./pages/Auth";
 import BookDetail from "./pages/BookDetail";
+import Import from "./pages/Import";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/perfil/:username" element={<ProtectedRoute><PublicProfile /></ProtectedRoute>} />
             <Route path="/buscar-usuarios" element={<ProtectedRoute><UserSearch /></ProtectedRoute>} />
             <Route path="/libro/:id" element={<ProtectedRoute><BookDetail /></ProtectedRoute>} />
+            <Route path="/importar" element={<ProtectedRoute><Import /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
