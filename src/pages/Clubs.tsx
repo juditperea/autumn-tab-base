@@ -1,13 +1,16 @@
+import { useState, useMemo } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, BookOpen } from "lucide-react";
+import { Users, BookOpen, Search } from "lucide-react";
 import { useMyClubs, usePublicClubs } from "@/hooks/useClubs";
 import { ClubCard } from "@/components/clubs/ClubCard";
 import { CreateClubDialog } from "@/components/clubs/CreateClubDialog";
 
 const Clubs = () => {
+  const [searchQuery, setSearchQuery] = useState("");
   const { data: myClubs, isLoading: myClubsLoading } = useMyClubs();
   const { data: publicClubs, isLoading: publicClubsLoading } = usePublicClubs();
 
@@ -15,6 +18,27 @@ const Clubs = () => {
   const discoverClubs = publicClubs?.filter(
     (pub) => !myClubs?.some((my) => my.id === pub.id)
   );
+
+  // Filter clubs based on search query
+  const filteredMyClubs = useMemo(() => {
+    if (!searchQuery.trim()) return myClubs;
+    const query = searchQuery.toLowerCase();
+    return myClubs?.filter(
+      (club) =>
+        club.name.toLowerCase().includes(query) ||
+        club.description?.toLowerCase().includes(query)
+    );
+  }, [myClubs, searchQuery]);
+
+  const filteredDiscoverClubs = useMemo(() => {
+    if (!searchQuery.trim()) return discoverClubs;
+    const query = searchQuery.toLowerCase();
+    return discoverClubs?.filter(
+      (club) =>
+        club.name.toLowerCase().includes(query) ||
+        club.description?.toLowerCase().includes(query)
+    );
+  }, [discoverClubs, searchQuery]);
 
   return (
     <div className="min-h-screen pb-20 bg-background">
@@ -28,6 +52,19 @@ const Clubs = () => {
           </div>
         </div>
       </header>
+
+      {/* Search Bar */}
+      <div className="max-w-lg mx-auto px-4 pt-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar clubs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
 
       {/* Clubs Content */}
       <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
@@ -50,19 +87,21 @@ const Clubs = () => {
                 </Card>
               ))}
             </div>
-          ) : myClubs?.length === 0 ? (
+          ) : filteredMyClubs?.length === 0 ? (
             <Card className="p-6 text-center">
               <Users className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Aún no perteneces a ningún club
+                {searchQuery ? "No se encontraron clubs" : "Aún no perteneces a ningún club"}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                ¡Crea uno o únete a uno público!
-              </p>
+              {!searchQuery && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  ¡Crea uno o únete a uno público!
+                </p>
+              )}
             </Card>
           ) : (
             <div className="space-y-3">
-              {myClubs?.map((club) => (
+              {filteredMyClubs?.map((club) => (
                 <ClubCard key={club.id} club={club} />
               ))}
             </div>
@@ -89,24 +128,26 @@ const Clubs = () => {
                 </Card>
               ))}
             </div>
-          ) : discoverClubs?.length === 0 ? (
+          ) : filteredDiscoverClubs?.length === 0 ? (
             <Card className="p-8 text-center shadow-card">
               <BookOpen className="w-12 h-12 mx-auto mb-3 text-primary" />
               <h3 className="font-semibold text-foreground mb-2">
-                No hay más clubs públicos
+                {searchQuery ? "No se encontraron clubs" : "No hay más clubs públicos"}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                ¡Sé el primero en crear uno nuevo!
+                {searchQuery ? "Intenta con otro término de búsqueda" : "¡Sé el primero en crear uno nuevo!"}
               </p>
-              <CreateClubDialog
-                trigger={
-                  <Button className="w-full shadow-warm">Crear club</Button>
-                }
-              />
+              {!searchQuery && (
+                <CreateClubDialog
+                  trigger={
+                    <Button className="w-full shadow-warm">Crear club</Button>
+                  }
+                />
+              )}
             </Card>
           ) : (
             <div className="space-y-3">
-              {discoverClubs?.map((club) => (
+              {filteredDiscoverClubs?.map((club) => (
                 <ClubCard key={club.id} club={club} />
               ))}
             </div>
