@@ -1,11 +1,16 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Star, BookOpen, MessageSquare, BookMarked, PartyPopper } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Star, BookOpen, MessageSquare, BookMarked, PartyPopper, Heart } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Activity } from '@/hooks/useActivityFeed';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useActivityLikes, useToggleActivityLike } from '@/hooks/useActivityInteractions';
+import { ActivityComments } from './ActivityComments';
+import { cn } from '@/lib/utils';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -34,29 +39,29 @@ const getActivityText = (activity: Activity) => {
   switch (activity.activity_type) {
     case 'rated_book':
       return (
-        <>
+        <span>
           calificó <strong>{bookTitle}</strong> con{' '}
           <Badge variant="secondary" className="ml-1 text-amber-600">
             <Star className="h-3 w-3 mr-0.5 fill-amber-500 text-amber-500" />
             {activity.rating?.toFixed(1)}
           </Badge>
-        </>
+        </span>
       );
     case 'reviewed_book':
       return (
-        <>
+        <span>
           escribió una reseña de <strong>{bookTitle}</strong>
-        </>
+        </span>
       );
     case 'started_reading':
       return (
-        <>
+        <span>
           empezó a leer <strong>{bookTitle}</strong>
-        </>
+        </span>
       );
     case 'finished_book':
       return (
-        <>
+        <span>
           terminó de leer <strong>{bookTitle}</strong>
           {activity.rating && (
             <Badge variant="secondary" className="ml-1 text-amber-600">
@@ -64,20 +69,32 @@ const getActivityText = (activity: Activity) => {
               {activity.rating.toFixed(1)}
             </Badge>
           )}
-        </>
+        </span>
       );
     case 'joined_club':
-      return <>se unió a un club de lectura</>;
+      return <span>se unió a un club de lectura</span>;
     default:
-      return <>hizo algo con {bookTitle}</>;
+      return <span>hizo algo con {bookTitle}</span>;
   }
 };
 
 export const ActivityCard = ({ activity }: ActivityCardProps) => {
+  const { user } = useAuth();
+  const { data: likesData } = useActivityLikes(activity.id);
+  const toggleLike = useToggleActivityLike();
+
   const timeAgo = formatDistanceToNow(new Date(activity.created_at), {
     addSuffix: true,
     locale: es,
   });
+
+  const handleLike = () => {
+    if (!user) return;
+    toggleLike.mutate({
+      activityId: activity.id,
+      isLiked: likesData?.userLiked ?? false,
+    });
+  };
 
   return (
     <Card className="hover:bg-muted/50 transition-colors">
@@ -122,6 +139,31 @@ export const ActivityCard = ({ activity }: ActivityCardProps) => {
                   <span>{timeAgo}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Like and comment actions */}
+            <div className="flex items-center gap-3 mt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "gap-1.5 h-8 px-2",
+                  likesData?.userLiked && "text-red-500"
+                )}
+                onClick={handleLike}
+                disabled={!user || toggleLike.isPending}
+              >
+                <Heart
+                  className={cn(
+                    "w-4 h-4",
+                    likesData?.userLiked && "fill-current"
+                  )}
+                />
+                {likesData?.count ? likesData.count : ""}
+              </Button>
+
+              {/* Comments section */}
+              <ActivityComments activityId={activity.id} />
             </div>
           </div>
         </div>

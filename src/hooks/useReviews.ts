@@ -99,8 +99,10 @@ export const useBookReviews = (bookId: string | undefined) => {
 };
 
 export const useUserReviews = (userId: string | undefined) => {
+  const { user } = useAuth();
+
   return useQuery({
-    queryKey: ["reviews", "user", userId],
+    queryKey: ["reviews", "user", userId, user?.id],
     queryFn: async () => {
       if (!userId) return [];
 
@@ -108,13 +110,59 @@ export const useUserReviews = (userId: string | undefined) => {
         .from("reviews")
         .select(`
           *,
+          profile:profiles(username, avatar_url),
           book:books(id, title, authors, cover_url)
         `)
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as Review[];
+
+      // Get ratings, votes count, and user's vote for each review
+      const reviewsWithExtras = await Promise.all(
+        data.map(async (review) => {
+          const { data: userBook } = await supabase
+            .from("user_books")
+            .select("rating")
+            .eq("user_id", review.user_id)
+            .eq("book_id", review.book_id)
+            .maybeSingle();
+
+          // Get votes count
+          const { count: upvotes } = await supabase
+            .from("review_votes")
+            .select("*", { count: "exact", head: true })
+            .eq("review_id", review.id)
+            .eq("vote", 1);
+
+          const { count: downvotes } = await supabase
+            .from("review_votes")
+            .select("*", { count: "exact", head: true })
+            .eq("review_id", review.id)
+            .eq("vote", -1);
+
+          // Get current user's vote
+          let userVote = null;
+          if (user?.id) {
+            const { data: vote } = await supabase
+              .from("review_votes")
+              .select("vote")
+              .eq("review_id", review.id)
+              .eq("user_id", user.id)
+              .maybeSingle();
+            userVote = vote?.vote ?? null;
+          }
+
+          return {
+            ...review,
+            user_book: userBook,
+            votes_count: (upvotes ?? 0) - (downvotes ?? 0),
+            user_vote: userVote,
+          };
+        })
+      );
+
+      return reviewsWithExtras as Review[];
     },
     enabled: !!userId,
   });
