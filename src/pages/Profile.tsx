@@ -202,11 +202,6 @@ const Profile = () => {
           isOwner={true}
         />
 
-        {/* Achievements */}
-        {user && (
-          <AchievementsSection userId={user.id} />
-        )}
-
         {/* Reading Stats Section */}
         {user && (
           <ReadingStatsSection userId={user.id} themeColor={themeColor} />
@@ -242,6 +237,11 @@ const Profile = () => {
           </h3>
           <UserReviewsList limit={3} />
         </section>
+
+        {/* Achievements - moved lower */}
+        {user && (
+          <AchievementsSection userId={user.id} isOwnProfile={true} />
+        )}
 
         {/* My Books */}
         <section>

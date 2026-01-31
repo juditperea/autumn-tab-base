@@ -8,6 +8,7 @@ import { AchievementBadge } from "./AchievementBadge";
 
 interface AchievementsSectionProps {
   userId?: string;
+  isOwnProfile?: boolean;
 }
 
 const CATEGORY_LABELS: Record<Achievement["category"], string> = {
@@ -26,7 +27,7 @@ const CATEGORY_ORDER: Achievement["category"][] = [
   "special",
 ];
 
-export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ userId }) => {
+export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ userId, isOwnProfile = true }) => {
   const { data: achievements, isLoading, error } = useAchievements(userId);
   const [expanded, setExpanded] = useState(false);
 
@@ -101,7 +102,9 @@ export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ userId
       {/* Unlocked achievements summary */}
       {unlockedAchievements.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-4">
-          Aún no has desbloqueado ningún logro. ¡Sigue leyendo! 📚
+          {isOwnProfile 
+            ? "Aún no has desbloqueado ningún logro. ¡Sigue leyendo! 📚"
+            : "Este usuario aún no ha desbloqueado logros."}
         </p>
       ) : (
         <div className="flex flex-wrap gap-2 mb-2">

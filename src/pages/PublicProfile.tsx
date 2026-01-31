@@ -2,7 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, Target, Award, Clock } from "lucide-react";
+import { ArrowLeft, BookOpen, Target, Award, Clock, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +12,9 @@ import { useUserActivities } from "@/hooks/useActivityFeed";
 import { ActivityCard } from "@/components/social/ActivityCard";
 import { ReadingStatsSection } from "@/components/stats/ReadingStatsSection";
 import { AchievementsSection } from "@/components/achievements/AchievementsSection";
+import { FavoriteBooks } from "@/components/profile/FavoriteBooks";
+import { useUserReviews } from "@/hooks/useReviews";
+import { ReviewCard } from "@/components/reviews/ReviewCard";
 
 const PublicProfile = () => {
   const { username } = useParams<{ username: string }>();
@@ -71,6 +74,9 @@ const PublicProfile = () => {
 
   // Fetch user's recent activities
   const { data: activities } = useUserActivities(profile?.id, 5);
+
+  // Fetch user's reviews
+  const { data: userReviews } = useUserReviews(profile?.id);
 
   // Redirect to own profile if viewing self
   if (user && profile?.id === user.id) {
@@ -172,11 +178,23 @@ const PublicProfile = () => {
           ))}
         </section>
 
-        {/* Achievements */}
-        <AchievementsSection userId={profile.id} />
+        {/* Favorite Books */}
+        <FavoriteBooks userId={profile.id} isOwner={false} />
 
-        {/* Reading Stats */}
-        <ReadingStatsSection userId={profile.id} />
+        {/* User's Reviews */}
+        {userReviews && userReviews.length > 0 && (
+          <section>
+            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              Sus reseñas
+            </h3>
+            <div className="space-y-3">
+              {userReviews.slice(0, 3).map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Recent Activity */}
         {activities && activities.length > 0 && (
@@ -192,6 +210,12 @@ const PublicProfile = () => {
             </div>
           </section>
         )}
+
+        {/* Reading Stats - moved lower */}
+        <ReadingStatsSection userId={profile.id} />
+
+        {/* Achievements - moved lower */}
+        <AchievementsSection userId={profile.id} isOwnProfile={false} />
       </main>
     </div>
   );
