@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { TabNavigation } from "./components/TabNavigation";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RealtimeNotificationsProvider } from "./components/RealtimeNotificationsProvider";
 import Feed from "./pages/Feed";
 import Search from "./pages/Search";
 import Scan from "./pages/Scan";
@@ -31,24 +32,26 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
-            <Route path="/buscar" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-            <Route path="/escanear" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
-            <Route path="/clubs" element={<ProtectedRoute><Clubs /></ProtectedRoute>} />
-            <Route path="/club/:id" element={<ProtectedRoute><ClubDetail /></ProtectedRoute>} />
-            <Route path="/actividad" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-            <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/editar-perfil" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
-            <Route path="/perfil/:username" element={<ProtectedRoute><PublicProfile /></ProtectedRoute>} />
-            <Route path="/buscar-usuarios" element={<ProtectedRoute><UserSearch /></ProtectedRoute>} />
-            <Route path="/libro/:id" element={<ProtectedRoute><BookDetail /></ProtectedRoute>} />
-            <Route path="/importar" element={<ProtectedRoute><Import /></ProtectedRoute>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <TabNavigation />
+          <RealtimeNotificationsProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
+              <Route path="/buscar" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+              <Route path="/escanear" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
+              <Route path="/clubs" element={<ProtectedRoute><Clubs /></ProtectedRoute>} />
+              <Route path="/club/:id" element={<ProtectedRoute><ClubDetail /></ProtectedRoute>} />
+              <Route path="/actividad" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+              <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/editar-perfil" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+              <Route path="/perfil/:username" element={<ProtectedRoute><PublicProfile /></ProtectedRoute>} />
+              <Route path="/buscar-usuarios" element={<ProtectedRoute><UserSearch /></ProtectedRoute>} />
+              <Route path="/libro/:id" element={<ProtectedRoute><BookDetail /></ProtectedRoute>} />
+              <Route path="/importar" element={<ProtectedRoute><Import /></ProtectedRoute>} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <TabNavigation />
+          </RealtimeNotificationsProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
