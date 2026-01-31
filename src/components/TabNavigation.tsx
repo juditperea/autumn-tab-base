@@ -1,4 +1,4 @@
-import { Home, Search, ScanLine, Users, User } from "lucide-react";
+import { Home, Search, ScanLine, Bell, User } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +7,7 @@ const tabs = [
   { path: "/", icon: Home, label: "Inicio" },
   { path: "/buscar", icon: Search, label: "Buscar" },
   { path: "/escanear", icon: ScanLine, label: "Escanear" },
-  { path: "/clubs", icon: Users, label: "Clubs" },
+  { path: "/actividad", icon: Bell, label: "Actividad" },
   { path: "/perfil", icon: User, label: "Perfil" },
 ];
 

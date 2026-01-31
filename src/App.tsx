@@ -19,6 +19,7 @@ import UserSearch from "./pages/UserSearch";
 import Auth from "./pages/Auth";
 import BookDetail from "./pages/BookDetail";
 import Import from "./pages/Import";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/escanear" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
             <Route path="/clubs" element={<ProtectedRoute><Clubs /></ProtectedRoute>} />
             <Route path="/club/:id" element={<ProtectedRoute><ClubDetail /></ProtectedRoute>} />
+            <Route path="/actividad" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/editar-perfil" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
             <Route path="/perfil/:username" element={<ProtectedRoute><PublicProfile /></ProtectedRoute>} />
