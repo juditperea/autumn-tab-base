@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, Target, Award, Clock, MessageSquare } from "lucide-react";
+import { ArrowLeft, BookOpen, Target, Award, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -11,6 +10,8 @@ import { FollowButton } from "@/components/social/FollowButton";
 import { FollowStats } from "@/components/social/FollowStats";
 import { useUserActivities } from "@/hooks/useActivityFeed";
 import { ActivityCard } from "@/components/social/ActivityCard";
+import { ReadingStatsSection } from "@/components/stats/ReadingStatsSection";
+import { AchievementsSection } from "@/components/achievements/AchievementsSection";
 
 const PublicProfile = () => {
   const { username } = useParams<{ username: string }>();
@@ -170,6 +171,12 @@ const PublicProfile = () => {
             </Card>
           ))}
         </section>
+
+        {/* Achievements */}
+        <AchievementsSection userId={profile.id} />
+
+        {/* Reading Stats */}
+        <ReadingStatsSection userId={profile.id} />
 
         {/* Recent Activity */}
         {activities && activities.length > 0 && (
