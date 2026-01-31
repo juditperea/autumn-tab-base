@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, BookOpen, Award, LogOut, Clock, MessageSquare, Pencil, Upload, BarChart3 } from "lucide-react";
+import { Settings, BookOpen, Award, LogOut, Clock, MessageSquare, Pencil, Upload } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,7 @@ import { FollowersModal } from "@/components/social/FollowersModal";
 import { FavoriteBooks } from "@/components/profile/FavoriteBooks";
 import { ReadingGoalCard } from "@/components/profile/ReadingGoalCard";
 import { ReadingStatsSection } from "@/components/stats/ReadingStatsSection";
+import { AchievementsSection } from "@/components/achievements/AchievementsSection";
 import { getThemeGradient, getThemeRing } from "@/components/profile/ThemeColorPicker";
 
 interface Profile {
@@ -200,6 +201,11 @@ const Profile = () => {
           booksRead={bookStats.read}
           isOwner={true}
         />
+
+        {/* Achievements */}
+        {user && (
+          <AchievementsSection userId={user.id} />
+        )}
 
         {/* Reading Stats Section */}
         {user && (
