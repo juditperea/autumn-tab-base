@@ -66,7 +66,7 @@ export const ReadingStatsSection: React.FC<ReadingStatsSectionProps> = ({
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Tu género favorito</p>
-              <p className="font-semibold text-foreground">{stats.topGenre}</p>
+              <p className="font-semibold text-foreground">{stats.topGenre.charAt(0).toUpperCase() + stats.topGenre.slice(1)}</p>
             </div>
           </div>
         </Card>

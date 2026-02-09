@@ -20,45 +20,16 @@ const GENRE_COLORS = [
   "hsl(280, 65%, 60%)",  // purple
 ];
 
-// Map English genres to Spanish
-const genreTranslations: Record<string, string> = {
-  "fiction": "Ficción",
-  "fantasy": "Fantasía",
-  "romance": "Romance",
-  "mystery": "Misterio",
-  "thriller": "Thriller",
-  "science fiction": "Ciencia Ficción",
-  "horror": "Terror",
-  "historical fiction": "Ficción Histórica",
-  "literary fiction": "Ficción Literaria",
-  "young adult": "Juvenil",
-  "children": "Infantil",
-  "biography": "Biografía",
-  "memoir": "Memorias",
-  "self-help": "Autoayuda",
-  "history": "Historia",
-  "science": "Ciencia",
-  "philosophy": "Filosofía",
-  "poetry": "Poesía",
-  "classics": "Clásicos",
-  "contemporary": "Contemporáneo",
-  "adventure": "Aventura",
-  "crime": "Crimen",
-  "dystopian": "Distopía",
-  "magical realism": "Realismo Mágico",
-  "nonfiction": "No Ficción",
-  "non-fiction": "No Ficción",
-};
-
-const translateGenre = (genre: string): string => {
-  const lower = genre.toLowerCase();
-  return genreTranslations[lower] || genre;
+// Genres are already normalized and translated by genreNormalizer.
+// Just capitalize first letter for display if needed.
+const displayGenre = (genre: string): string => {
+  return genre.charAt(0).toUpperCase() + genre.slice(1);
 };
 
 export const GenreDistributionChart: React.FC<GenreDistributionChartProps> = ({ data }) => {
   const chartData = data.map(d => ({
     ...d,
-    displayName: translateGenre(d.genre),
+    displayName: displayGenre(d.genre),
   }));
 
   if (data.length === 0) {
