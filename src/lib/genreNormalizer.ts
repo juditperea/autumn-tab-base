@@ -1,278 +1,216 @@
 /**
- * Genre Normalizer
- * 
- * Cleans, deduplicates, filters and translates raw book genres
- * from Google Books (categories) and OpenLibrary (subjects).
- * 
- * Designed to run in the frontend at display time without modifying DB schema.
+ * Genre Normalizer — Strict Canonical Whitelist
+ *
+ * Maps raw book genres (from Google Books + OpenLibrary) to a fixed set
+ * of canonical Spanish genres. Anything not explicitly mapped is discarded.
+ *
+ * Key design decisions:
+ * - "Ficción juvenil" does NOT exist; instead mapped to ["ficción", "juvenil"] separately.
+ * - One raw string can produce 0, 1, or N canonical genres.
+ * - No "Otros" bucket — unrecognized genres are silently ignored.
  */
 
-// ── Synonym map (normalized lowercase key → display label in Spanish) ──
-// Extend this map as needed to collapse duplicates.
-export const GENRE_SYNONYMS: Record<string, string> = {
-  // Ficción juvenil
-  "juvenile fiction": "ficción juvenil",
-  "young adult fiction": "ficción juvenil",
-  "ya fiction": "ficción juvenil",
-  "children's fiction": "ficción juvenil",
-  "ficción juvenil": "ficción juvenil",
+// ── Canonical genres (whitelist) ──
+export const CANONICAL_GENRES = [
+  "ficción",
+  "juvenil",
+  "no ficción",
+  "misterio y thriller",
+  "romance",
+  "fantasía",
+  "ciencia ficción",
+  "terror",
+  "histórica",
+  "drama",
+  "poesía",
+  "ensayo",
+  "biografía",
+  "educación",
+  "cómic y novela gráfica",
+] as const;
 
-  // Ficción general
-  "fiction": "ficción",
-  "fiction - general": "ficción",
-  "ficción": "ficción",
-  "modern fiction": "ficción",
-  "adult fiction": "ficción",
-  "literary fiction": "ficción literaria",
-  "ficción literaria": "ficción literaria",
+export type CanonicalGenre = (typeof CANONICAL_GENRES)[number];
 
-  // Relatos
-  "short stories": "relatos",
-  "short stories (single author)": "relatos",
-  "cuentos": "relatos",
-  "relatos": "relatos",
+const CANONICAL_SET = new Set<string>(CANONICAL_GENRES);
+
+// ── Multi-genre mapping: normalized key → canonical genre(s) ──
+const GENRE_MAP: Record<string, CanonicalGenre[]> = {
+  // Ficción + Juvenil (split)
+  "juvenile fiction": ["ficción", "juvenil"],
+  "young adult fiction": ["ficción", "juvenil"],
+  "ya fiction": ["ficción", "juvenil"],
+  "children's fiction": ["ficción", "juvenil"],
+  "juvenile nonfiction": ["juvenil", "no ficción"],
+  "children's nonfiction": ["juvenil", "no ficción"],
+
+  // Ficción
+  "fiction": ["ficción"],
+  "fiction - general": ["ficción"],
+  "general fiction": ["ficción"],
+  "modern fiction": ["ficción"],
+  "adult fiction": ["ficción"],
+  "literary fiction": ["ficción"],
+  "ficción": ["ficción"],
 
   // No ficción
-  "nonfiction": "no ficción",
-  "non-fiction": "no ficción",
-  "no ficción": "no ficción",
+  "nonfiction": ["no ficción"],
+  "non-fiction": ["no ficción"],
+  "no ficción": ["no ficción"],
 
   // Fantasía
-  "fantasy": "fantasía",
-  "fantasy fiction": "fantasía",
-  "fantasía": "fantasía",
-  "epic fantasy": "fantasía épica",
+  "fantasy": ["fantasía"],
+  "fantasy fiction": ["fantasía"],
+  "fantasía": ["fantasía"],
+  "epic fantasy": ["fantasía"],
 
   // Ciencia ficción
-  "science fiction": "ciencia ficción",
-  "sci-fi": "ciencia ficción",
-  "ciencia ficción": "ciencia ficción",
+  "science fiction": ["ciencia ficción"],
+  "sci-fi": ["ciencia ficción"],
+  "ciencia ficción": ["ciencia ficción"],
 
   // Romance
-  "romance": "romance",
-  "romance fiction": "romance",
-  "love stories": "romance",
+  "romance": ["romance"],
+  "romance fiction": ["romance"],
+  "love stories": ["romance"],
 
-  // Misterio / Thriller
-  "mystery": "misterio",
-  "mystery fiction": "misterio",
-  "misterio": "misterio",
-  "thriller": "thriller",
-  "suspense": "thriller",
-  "thrillers": "thriller",
+  // Misterio y Thriller
+  "mystery": ["misterio y thriller"],
+  "mystery fiction": ["misterio y thriller"],
+  "misterio": ["misterio y thriller"],
+  "thriller": ["misterio y thriller"],
+  "suspense": ["misterio y thriller"],
+  "thrillers": ["misterio y thriller"],
+  "crime": ["misterio y thriller"],
+  "crime fiction": ["misterio y thriller"],
 
   // Terror
-  "horror": "terror",
-  "horror fiction": "terror",
-  "terror": "terror",
+  "horror": ["terror"],
+  "horror fiction": ["terror"],
+  "terror": ["terror"],
 
   // Histórica
-  "historical fiction": "ficción histórica",
-  "ficción histórica": "ficción histórica",
-
-  // Aventura
-  "adventure": "aventura",
-  "adventure fiction": "aventura",
-  "aventura": "aventura",
-
-  // Biografía / Memorias
-  "biography": "biografía",
-  "biography & autobiography": "biografía",
-  "biografía": "biografía",
-  "memoir": "memorias",
-  "memorias": "memorias",
-
-  // Autoayuda
-  "self-help": "autoayuda",
-  "autoayuda": "autoayuda",
-
-  // Historia
-  "history": "historia",
-  "historia": "historia",
-
-  // Ciencia
-  "science": "ciencia",
-  "ciencia": "ciencia",
-
-  // Filosofía
-  "philosophy": "filosofía",
-  "filosofía": "filosofía",
-
-  // Poesía
-  "poetry": "poesía",
-  "poesía": "poesía",
-
-  // Clásicos
-  "classics": "clásicos",
-  "clásicos": "clásicos",
-
-  // Crimen
-  "crime": "crimen",
-  "crime fiction": "crimen",
-  "crimen": "crimen",
-
-  // Distopía
-  "dystopian": "distopía",
-  "dystopian fiction": "distopía",
-  "distopía": "distopía",
-
-  // Realismo mágico
-  "magical realism": "realismo mágico",
-  "realismo mágico": "realismo mágico",
-
-  // Humor
-  "humor": "humor",
-  "comedy": "humor",
+  "historical fiction": ["histórica"],
+  "ficción histórica": ["histórica"],
+  "historical": ["histórica"],
 
   // Drama
-  "drama": "drama",
+  "drama": ["drama"],
 
-  // Política
-  "political fiction": "ficción política",
-  "politics": "política",
+  // Poesía
+  "poetry": ["poesía"],
+  "poesía": ["poesía"],
 
-  // Religión
-  "religion": "religión",
-  "spirituality": "espiritualidad",
+  // Ensayo
+  "essay": ["ensayo"],
+  "essays": ["ensayo"],
+  "ensayo": ["ensayo"],
 
-  // Psicología
-  "psychology": "psicología",
-
-  // Negocios
-  "business": "negocios",
-  "business & economics": "negocios",
-
-  // Cocina
-  "cooking": "cocina",
-
-  // Arte
-  "art": "arte",
-
-  // Viajes
-  "travel": "viajes",
+  // Biografía
+  "biography": ["biografía"],
+  "biography & autobiography": ["biografía"],
+  "biografía": ["biografía"],
+  "memoir": ["biografía"],
+  "autobiography": ["biografía"],
 
   // Educación
-  "education": "educación",
+  "education": ["educación"],
+  "educación": ["educación"],
 
-  // Manga/Comics
-  "comics & graphic novels": "cómics",
-  "manga": "manga",
-  "graphic novels": "novela gráfica",
+  // Cómic y novela gráfica
+  "comics & graphic novels": ["cómic y novela gráfica"],
+  "manga": ["cómic y novela gráfica"],
+  "graphic novels": ["cómic y novela gráfica"],
+  "comic books": ["cómic y novela gráfica"],
+  "cómics": ["cómic y novela gráfica"],
 };
 
-// ── Stoplist: exact matches after normalization ──
-const STOPLIST_EXACT = new Set([
-  "general",
-  "fiction",
-  "nonfiction",
-  "literature",
-  "books",
-  "book",
-  "adult fiction",
-  "juvenile nonfiction",
-  "juvenile",
-  "accessible book",
-  "protected daisy",
-  "in library",
-  "lending library",
-  "internet archive wishlist",
-  "large type books",
-  "reading level",
-]);
-
-// ── Stoplist: if normalized genre contains any of these, discard ──
+// ── Stoplist: discard before attempting mapping ──
 const STOPLIST_CONTAINS = [
   "criticism",
-  "history and criticism",
   "reference",
+  "history and criticism",
   "bibliography",
   "periodicals",
   "textbooks",
   "examinations",
   "study and teaching",
   "problems, exercises",
+  "families",
+  "anarchists",
+  "literary",
+  "accessible book",
+  "protected daisy",
+  "in library",
+  "lending library",
+  "internet archive",
+  "large type books",
+  "reading level",
+  "short stories",
+  "single author",
+  "classics",
 ];
 
 /**
- * Clean a single raw genre string:
- * - trim, lowercase
- * - remove language prefixes (spanish:, english:, es:, en:)
- * - collapse whitespace
- * - remove trailing punctuation
- * - normalize separators
+ * Clean a single raw genre string.
  */
 function cleanGenre(raw: string): string {
   let g = raw.trim().toLowerCase();
-
-  // Remove language prefixes
   g = g.replace(/^(spanish|english|es|en)\s*:\s*/i, "");
-
-  // Collapse whitespace
   g = g.replace(/\s+/g, " ");
-
-  // Normalize separators to " - "
-  g = g.replace(/\s*[/—:]\s*/g, " - ");
-
-  // Remove trailing punctuation
+  g = g.replace(/\s*[/—]\s*/g, " - ");
   g = g.replace(/[.,;:!?]+$/, "");
-
   return g.trim();
 }
 
 /**
- * Check if a genre should be discarded.
+ * Check if a cleaned genre should be discarded.
  */
-function isStopGenre(normalized: string): boolean {
-  if (STOPLIST_EXACT.has(normalized)) return true;
-  return STOPLIST_CONTAINS.some((stop) => normalized.includes(stop));
+function isStopGenre(cleaned: string): boolean {
+  return STOPLIST_CONTAINS.some((stop) => cleaned.includes(stop));
 }
 
 /**
- * Apply synonym mapping. Returns the Spanish display label if found,
- * otherwise capitalizes the first letter of the cleaned genre.
+ * Map a single raw genre string to 0–N canonical genres.
  */
-function applySynonym(cleaned: string): string {
-  if (GENRE_SYNONYMS[cleaned]) {
-    return GENRE_SYNONYMS[cleaned];
-  }
+function mapSingleGenre(cleaned: string): CanonicalGenre[] {
+  // Direct map lookup
+  if (GENRE_MAP[cleaned]) return GENRE_MAP[cleaned];
 
-  // Try matching the part before " - " separator
+  // Try prefix before " - "
   const dashIdx = cleaned.indexOf(" - ");
   if (dashIdx > 0) {
     const prefix = cleaned.substring(0, dashIdx).trim();
-    if (GENRE_SYNONYMS[prefix]) {
-      return GENRE_SYNONYMS[prefix];
-    }
+    if (GENRE_MAP[prefix]) return GENRE_MAP[prefix];
   }
 
-  // Capitalize first letter as fallback display
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  // If the cleaned string itself is a canonical genre, accept it
+  if (CANONICAL_SET.has(cleaned)) return [cleaned as CanonicalGenre];
+
+  // Not recognized → discard
+  return [];
 }
 
 /**
- * Normalize an array of raw genres from books.genres.
- * Returns deduplicated, filtered, synonym-collapsed labels in Spanish.
+ * Map an array of raw genres to deduplicated canonical genres.
+ * Returns only genres from the strict whitelist.
  */
-export function normalizeGenres(rawGenres: string[]): string[] {
+export function mapToCanonicalGenres(rawGenres: string[]): CanonicalGenre[] {
   if (!rawGenres || rawGenres.length === 0) return [];
 
   const seen = new Set<string>();
-  const result: string[] = [];
+  const result: CanonicalGenre[] = [];
 
   for (const raw of rawGenres) {
     const cleaned = cleanGenre(raw);
     if (!cleaned) continue;
     if (isStopGenre(cleaned)) continue;
 
-    const label = applySynonym(cleaned);
-    const labelLower = label.toLowerCase();
-
-    // Also check if the resolved label is in stoplist
-    if (isStopGenre(labelLower)) continue;
-
-    if (!seen.has(labelLower)) {
-      seen.add(labelLower);
-      result.push(label);
+    const mapped = mapSingleGenre(cleaned);
+    for (const genre of mapped) {
+      if (!seen.has(genre)) {
+        seen.add(genre);
+        result.push(genre);
+      }
     }
   }
 
@@ -280,11 +218,13 @@ export function normalizeGenres(rawGenres: string[]): string[] {
 }
 
 /**
- * Pick the single "primary" genre for a book.
- * Takes raw genres, normalizes, and returns the first valid one.
- * Returns "Otros" if none survive filtering.
+ * Pick a single primary genre for display.
+ * Returns null if no canonical genre matches.
  */
-export function getPrimaryGenre(rawGenres: string[] | null | undefined): string {
-  const normalized = normalizeGenres(rawGenres || []);
-  return normalized.length > 0 ? normalized[0] : "Otros";
+export function getPrimaryGenre(rawGenres: string[] | null | undefined): string | null {
+  const canonical = mapToCanonicalGenres(rawGenres || []);
+  return canonical.length > 0 ? canonical[0] : null;
 }
+
+// ── Legacy exports for backward compatibility ──
+export const normalizeGenres = mapToCanonicalGenres;

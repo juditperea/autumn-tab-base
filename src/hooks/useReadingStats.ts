@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { getPrimaryGenre } from "@/lib/genreNormalizer";
+import { mapToCanonicalGenres } from "@/lib/genreNormalizer";
 
 export interface MonthlyStats {
   month: string;
@@ -97,20 +97,18 @@ export const useReadingStats = (userId?: string) => {
         pages: stats.pages,
       }));
 
-      // Genre stats (from all time) – 1 primary genre per book, normalized
+      // Genre stats – each book can contribute to multiple canonical genres
       const genreCounts = new Map<string, number>();
       books.forEach(ub => {
-        const primary = getPrimaryGenre(ub.book?.genres as string[] | null);
-        genreCounts.set(primary, (genreCounts.get(primary) || 0) + 1);
+        const canonical = mapToCanonicalGenres((ub.book?.genres as string[] | null) || []);
+        // Each canonical genre gets +1 per book (deduplicated within the book)
+        canonical.forEach(g => {
+          genreCounts.set(g, (genreCounts.get(g) || 0) + 1);
+        });
       });
 
-      const totalGenreCounts = Array.from(genreCounts.values()).reduce((a, b) => a + b, 0);
-
-      // Top 8 genres (no "Otros" bucket), exclude books without genre
       const sorted = Array.from(genreCounts.entries())
-        .filter(([genre]) => genre !== "Otros")
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8);
+        .sort((a, b) => b[1] - a[1]);
 
       const filteredTotal = sorted.reduce((sum, [, c]) => sum + c, 0);
       const genreStats: GenreStats[] = sorted.map(([genre, count]) => ({
