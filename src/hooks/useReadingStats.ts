@@ -106,33 +106,18 @@ export const useReadingStats = (userId?: string) => {
 
       const totalGenreCounts = Array.from(genreCounts.values()).reduce((a, b) => a + b, 0);
 
-      // Top 7 genres + collapse rest into "Otros"
-      const sorted = Array.from(genreCounts.entries()).sort((a, b) => b[1] - a[1]);
-      const topN = 7;
-      let genreStats: GenreStats[];
+      // Top 8 genres (no "Otros" bucket), exclude books without genre
+      const sorted = Array.from(genreCounts.entries())
+        .filter(([genre]) => genre !== "Otros")
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8);
 
-      if (sorted.length <= topN) {
-        genreStats = sorted.map(([genre, count]) => ({
-          genre,
-          count,
-          percentage: totalGenreCounts > 0 ? Math.round((count / totalGenreCounts) * 100) : 0,
-        }));
-      } else {
-        const top = sorted.slice(0, topN);
-        const othersCount = sorted.slice(topN).reduce((sum, [, c]) => sum + c, 0);
-        genreStats = top.map(([genre, count]) => ({
-          genre,
-          count,
-          percentage: totalGenreCounts > 0 ? Math.round((count / totalGenreCounts) * 100) : 0,
-        }));
-        if (othersCount > 0) {
-          genreStats.push({
-            genre: "Otros",
-            count: othersCount,
-            percentage: totalGenreCounts > 0 ? Math.round((othersCount / totalGenreCounts) * 100) : 0,
-          });
-        }
-      }
+      const filteredTotal = sorted.reduce((sum, [, c]) => sum + c, 0);
+      const genreStats: GenreStats[] = sorted.map(([genre, count]) => ({
+        genre,
+        count,
+        percentage: filteredTotal > 0 ? Math.round((count / filteredTotal) * 100) : 0,
+      }));
 
       const topGenre = genreStats.length > 0 ? genreStats[0].genre : null;
 
