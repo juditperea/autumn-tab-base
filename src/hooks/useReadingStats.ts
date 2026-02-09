@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { getPrimaryGenre } from "@/lib/genreNormalizer";
 
 export interface MonthlyStats {
   month: string;
@@ -96,24 +97,42 @@ export const useReadingStats = (userId?: string) => {
         pages: stats.pages,
       }));
 
-      // Genre stats (from all time)
+      // Genre stats (from all time) – 1 primary genre per book, normalized
       const genreCounts = new Map<string, number>();
       books.forEach(ub => {
-        const genres = ub.book?.genres || [];
-        genres.forEach((genre: string) => {
-          genreCounts.set(genre, (genreCounts.get(genre) || 0) + 1);
-        });
+        const primary = getPrimaryGenre(ub.book?.genres as string[] | null);
+        genreCounts.set(primary, (genreCounts.get(primary) || 0) + 1);
       });
 
       const totalGenreCounts = Array.from(genreCounts.values()).reduce((a, b) => a + b, 0);
-      const genreStats: GenreStats[] = Array.from(genreCounts.entries())
-        .map(([genre, count]) => ({
+
+      // Top 7 genres + collapse rest into "Otros"
+      const sorted = Array.from(genreCounts.entries()).sort((a, b) => b[1] - a[1]);
+      const topN = 7;
+      let genreStats: GenreStats[];
+
+      if (sorted.length <= topN) {
+        genreStats = sorted.map(([genre, count]) => ({
           genre,
           count,
           percentage: totalGenreCounts > 0 ? Math.round((count / totalGenreCounts) * 100) : 0,
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 8); // Top 8 genres
+        }));
+      } else {
+        const top = sorted.slice(0, topN);
+        const othersCount = sorted.slice(topN).reduce((sum, [, c]) => sum + c, 0);
+        genreStats = top.map(([genre, count]) => ({
+          genre,
+          count,
+          percentage: totalGenreCounts > 0 ? Math.round((count / totalGenreCounts) * 100) : 0,
+        }));
+        if (othersCount > 0) {
+          genreStats.push({
+            genre: "Otros",
+            count: othersCount,
+            percentage: totalGenreCounts > 0 ? Math.round((othersCount / totalGenreCounts) * 100) : 0,
+          });
+        }
+      }
 
       const topGenre = genreStats.length > 0 ? genreStats[0].genre : null;
 
