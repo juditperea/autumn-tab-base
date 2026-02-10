@@ -1,44 +1,22 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { BookOpen, FileText, Star, TrendingUp, Flame, Award } from "lucide-react";
+import { BookOpen, FileText, Star, Flame } from "lucide-react";
 import { ReadingStats } from "@/hooks/useReadingStats";
+import { useTranslation } from "react-i18next";
 
 interface StatsOverviewCardsProps {
   stats: ReadingStats;
   themeColor?: string;
 }
 
-export const StatsOverviewCards: React.FC<StatsOverviewCardsProps> = ({ 
-  stats,
-  themeColor = "orange" 
-}) => {
-  const currentYear = new Date().getFullYear();
+export const StatsOverviewCards: React.FC<StatsOverviewCardsProps> = ({ stats, themeColor = "orange" }) => {
+  const { t } = useTranslation();
 
   const overviewStats = [
-    {
-      label: "Libros este año",
-      value: stats.booksThisYear,
-      icon: BookOpen,
-      color: "text-primary",
-    },
-    {
-      label: "Páginas leídas",
-      value: stats.pagesThisYear.toLocaleString(),
-      icon: FileText,
-      color: "text-blue-500",
-    },
-    {
-      label: "Calificación media",
-      value: stats.averageRating > 0 ? `${stats.averageRating}/10` : "—",
-      icon: Star,
-      color: "text-yellow-500",
-    },
-    {
-      label: "Racha de meses",
-      value: stats.currentStreak > 0 ? `${stats.currentStreak} 🔥` : "0",
-      icon: Flame,
-      color: "text-orange-500",
-    },
+    { label: t("stats.booksThisYear"), value: stats.booksThisYear, icon: BookOpen, color: "text-primary" },
+    { label: t("stats.pagesRead"), value: stats.pagesThisYear.toLocaleString(), icon: FileText, color: "text-blue-500" },
+    { label: t("stats.averageRating"), value: stats.averageRating > 0 ? `${stats.averageRating}/10` : "—", icon: Star, color: "text-yellow-500" },
+    { label: t("stats.monthStreak"), value: stats.currentStreak > 0 ? `${stats.currentStreak} 🔥` : "0", icon: Flame, color: "text-orange-500" },
   ];
 
   return (

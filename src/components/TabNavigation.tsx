@@ -2,18 +2,20 @@ import { Home, Search, ScanLine, Bell, User } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-
-const tabs = [
-  { path: "/", icon: Home, label: "Inicio" },
-  { path: "/buscar", icon: Search, label: "Buscar" },
-  { path: "/escanear", icon: ScanLine, label: "Escanear" },
-  { path: "/actividad", icon: Bell, label: "Actividad" },
-  { path: "/perfil", icon: User, label: "Perfil" },
-];
+import { useTranslation } from "react-i18next";
 
 export const TabNavigation = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const { t } = useTranslation();
+
+  const tabs = [
+    { path: "/", icon: Home, label: t("nav.home") },
+    { path: "/buscar", icon: Search, label: t("nav.search") },
+    { path: "/escanear", icon: ScanLine, label: t("nav.scan") },
+    { path: "/actividad", icon: Bell, label: t("nav.activity") },
+    { path: "/perfil", icon: User, label: t("nav.profile") },
+  ];
   
   // Don't show navigation on auth page or if not authenticated
   if (!user || location.pathname === '/auth') {

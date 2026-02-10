@@ -9,27 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsernameAvailability } from "@/hooks/useUsernameAvailability";
+import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { BookOpen, Check, X, Loader2 } from "lucide-react";
 
-const loginSchema = z.object({
-  email: z.string().trim().email({ message: "Email inválido" }).max(255),
-  password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres" }).max(100),
-});
-
-const signupSchema = z.object({
-  email: z.string().trim().email({ message: "Email inválido" }).max(255),
-  password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres" }).max(100),
-  username: z
-    .string()
-    .trim()
-    .min(3, { message: "El nombre de usuario debe tener al menos 3 caracteres" })
-    .max(50, { message: "El nombre de usuario debe tener menos de 50 caracteres" })
-    .regex(/^[a-zA-Z0-9_]+$/, { message: "Solo letras, números y guiones bajos" }),
-  fullName: z.string().trim().max(100).optional(),
-});
-
 const Auth = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -39,11 +24,23 @@ const Auth = () => {
   
   const { isAvailable, isChecking } = useUsernameAvailability(username);
 
-  // Redirigir si ya está autenticado
+  const loginSchema = z.object({
+    email: z.string().trim().email({ message: t("auth.invalidEmail") }).max(255),
+    password: z.string().min(6, { message: t("auth.passwordMin") }).max(100),
+  });
+
+  const signupSchema = z.object({
+    email: z.string().trim().email({ message: t("auth.invalidEmail") }).max(255),
+    password: z.string().min(6, { message: t("auth.passwordMin") }).max(100),
+    username: z.string().trim()
+      .min(3, { message: t("auth.usernameMin") })
+      .max(50, { message: t("auth.usernameMax") })
+      .regex(/^[a-zA-Z0-9_]+$/, { message: t("auth.usernameRegex") }),
+    fullName: z.string().trim().max(100).optional(),
+  });
+
   useEffect(() => {
-    if (user) {
-      navigate("/");
-    }
+    if (user) navigate("/");
   }, [user, navigate]);
 
   const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -59,85 +56,41 @@ const Auth = () => {
     try {
       if (isLogin) {
         loginSchema.parse({ email, password });
-        
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          if (error.message.includes("Invalid login credentials")) {
-            throw new Error("Email o contraseña incorrectos");
-          }
+          if (error.message.includes("Invalid login credentials")) throw new Error(t("auth.invalidCredentials"));
           throw error;
         }
-
-        toast({
-          title: "¡Bienvenido de vuelta!",
-          description: "Has iniciado sesión correctamente",
-        });
+        toast({ title: t("auth.welcomeBack"), description: t("auth.loggedIn") });
         navigate("/");
       } else {
         signupSchema.parse({ email, password, username: formUsername, fullName });
-
-        // Verificar disponibilidad de username antes de registrar
-        if (isAvailable === false) {
-          throw new Error("Este nombre de usuario ya está en uso");
-        }
-
+        if (isAvailable === false) throw new Error(t("auth.usernameTaken"));
         const redirectUrl = `${window.location.origin}/`;
-        
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: redirectUrl,
-            data: {
-              username: formUsername,
-              full_name: fullName || "",
-            }
-          }
+          email, password,
+          options: { emailRedirectTo: redirectUrl, data: { username: formUsername, full_name: fullName || "" } }
         });
-
         if (error) {
-          if (error.message.includes("User already registered")) {
-            throw new Error("Este email ya está registrado");
-          }
-          if (error.message.includes("duplicate key") || error.message.includes("profiles_username_key")) {
-            throw new Error("Este nombre de usuario ya está en uso");
-          }
+          if (error.message.includes("User already registered")) throw new Error(t("auth.emailExists"));
+          if (error.message.includes("duplicate key") || error.message.includes("profiles_username_key")) throw new Error(t("auth.usernameTaken"));
           throw error;
         }
-
-        toast({
-          title: "¡Cuenta creada!",
-          description: "Tu perfil ha sido creado correctamente",
-        });
+        toast({ title: t("auth.accountCreated"), description: t("auth.profileCreated") });
         navigate("/");
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
-        toast({
-          variant: "destructive",
-          title: "Error de validación",
-          description: error.errors[0].message,
-        });
+        toast({ variant: "destructive", title: t("auth.validationError"), description: error.errors[0].message });
       } else if (error instanceof Error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message,
-        });
+        toast({ variant: "destructive", title: t("auth.error"), description: error.message });
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // No mostrar nada mientras se verifica si el usuario ya está autenticado
-  if (user) {
-    return null;
-  }
+  if (user) return null;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-background">
@@ -148,44 +101,28 @@ const Auth = () => {
               <BookOpen className="w-8 h-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Lecturas</CardTitle>
-          <CardDescription>
-            Tu comunidad de lectura favorita
-          </CardDescription>
+          <CardTitle className="text-2xl">{t("auth.title")}</CardTitle>
+          <CardDescription>{t("auth.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={isLogin ? "login" : "signup"} onValueChange={(v) => setIsLogin(v === "login")}>
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Iniciar sesión</TabsTrigger>
-              <TabsTrigger value="signup">Registrarse</TabsTrigger>
+              <TabsTrigger value="login">{t("auth.login")}</TabsTrigger>
+              <TabsTrigger value="signup">{t("auth.signup")}</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
               <form onSubmit={handleAuth} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    name="email"
-                    type="email"
-                    placeholder="tu@email.com"
-                    required
-                    disabled={loading}
-                  />
+                  <Label htmlFor="login-email">{t("auth.email")}</Label>
+                  <Input id="login-email" name="email" type="email" placeholder={t("auth.emailPlaceholder")} required disabled={loading} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Contraseña</Label>
-                  <Input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    disabled={loading}
-                  />
+                  <Label htmlFor="login-password">{t("auth.password")}</Label>
+                  <Input id="login-password" name="password" type="password" placeholder={t("auth.passwordPlaceholder")} required disabled={loading} />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Iniciando..." : "Iniciar sesión"}
+                  {loading ? t("auth.loggingIn") : t("auth.login")}
                 </Button>
               </form>
             </TabsContent>
@@ -193,71 +130,31 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleAuth} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-username">Nombre de usuario</Label>
+                  <Label htmlFor="signup-username">{t("auth.username")}</Label>
                   <div className="relative">
-                    <Input
-                      id="signup-username"
-                      name="username"
-                      type="text"
-                      placeholder="maria_lectora"
-                      required
-                      disabled={loading}
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="pr-10"
-                    />
+                    <Input id="signup-username" name="username" type="text" placeholder={t("auth.usernamePlaceholder")} required disabled={loading} value={username} onChange={(e) => setUsername(e.target.value)} className="pr-10" />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       {isChecking && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-                      {!isChecking && isAvailable === true && username.length >= 3 && (
-                        <Check className="w-4 h-4 text-green-500" />
-                      )}
-                      {!isChecking && isAvailable === false && (
-                        <X className="w-4 h-4 text-destructive" />
-                      )}
+                      {!isChecking && isAvailable === true && username.length >= 3 && <Check className="w-4 h-4 text-green-500" />}
+                      {!isChecking && isAvailable === false && <X className="w-4 h-4 text-destructive" />}
                     </div>
                   </div>
-                  {!isChecking && isAvailable === false && (
-                    <p className="text-sm text-destructive">Este nombre de usuario ya está en uso</p>
-                  )}
+                  {!isChecking && isAvailable === false && <p className="text-sm text-destructive">{t("auth.usernameTaken")}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-fullname">Nombre completo (opcional)</Label>
-                  <Input
-                    id="signup-fullname"
-                    name="fullName"
-                    type="text"
-                    placeholder="María García"
-                    disabled={loading}
-                  />
+                  <Label htmlFor="signup-fullname">{t("auth.fullName")}</Label>
+                  <Input id="signup-fullname" name="fullName" type="text" placeholder={t("auth.fullNamePlaceholder")} disabled={loading} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    name="email"
-                    type="email"
-                    placeholder="tu@email.com"
-                    required
-                    disabled={loading}
-                  />
+                  <Label htmlFor="signup-email">{t("auth.email")}</Label>
+                  <Input id="signup-email" name="email" type="email" placeholder={t("auth.emailPlaceholder")} required disabled={loading} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Contraseña</Label>
-                  <Input
-                    id="signup-password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    disabled={loading}
-                  />
+                  <Label htmlFor="signup-password">{t("auth.password")}</Label>
+                  <Input id="signup-password" name="password" type="password" placeholder={t("auth.passwordPlaceholder")} required disabled={loading} />
                 </div>
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={loading || isChecking || isAvailable === false}
-                >
-                  {loading ? "Creando cuenta..." : "Crear cuenta"}
+                <Button type="submit" className="w-full" disabled={loading || isChecking || isAvailable === false}>
+                  {loading ? t("auth.creatingAccount") : t("auth.createAccount")}
                 </Button>
               </form>
             </TabsContent>
