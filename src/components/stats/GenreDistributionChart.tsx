@@ -10,14 +10,21 @@ interface GenreDistributionChartProps {
 }
 
 const GENRE_COLORS = [
-  "hsl(24, 95%, 53%)",   // orange
-  "hsl(45, 93%, 47%)",   // amber
-  "hsl(160, 84%, 39%)",  // emerald
-  "hsl(217, 91%, 60%)",  // blue
-  "hsl(263, 70%, 50%)",  // violet
-  "hsl(346, 77%, 49%)",  // rose
-  "hsl(173, 80%, 40%)",  // teal
-  "hsl(280, 65%, 60%)",  // purple
+  "hsl(24, 95%, 53%)",   // orange — ficción
+  "hsl(160, 84%, 39%)",  // emerald — juvenil
+  "hsl(217, 91%, 60%)",  // blue — no ficción
+  "hsl(346, 77%, 49%)",  // rose — misterio y thriller
+  "hsl(340, 65%, 62%)",  // pink — romance
+  "hsl(263, 70%, 50%)",  // violet — fantasía
+  "hsl(200, 80%, 50%)",  // cyan — ciencia ficción
+  "hsl(0, 72%, 45%)",    // red — terror
+  "hsl(45, 93%, 47%)",   // amber — histórica
+  "hsl(30, 60%, 42%)",   // brown — drama
+  "hsl(280, 65%, 60%)",  // purple — poesía
+  "hsl(173, 80%, 40%)",  // teal — ensayo
+  "hsl(50, 80%, 55%)",   // gold — biografía
+  "hsl(142, 60%, 45%)",  // green — educación
+  "hsl(190, 70%, 50%)",  // sky — cómic y novela gráfica
 ];
 
 // Genres are already normalized and translated by genreNormalizer.
