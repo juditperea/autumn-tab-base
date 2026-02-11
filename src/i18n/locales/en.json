@@ -322,6 +322,75 @@
     "literaryAwards": "Literary awards",
     "literaryAwardsDesc": "International award winners"
   },
+  "readingGoal": {
+    "challenge": "Reading challenge {{year}}",
+    "challengeShort": "Challenge {{year}}",
+    "fixedWarning": "How many books do you plan to read this year? Once set, <strong>you won't be able to change it</strong>.",
+    "setGoal": "Set goal",
+    "yourChallenge": "Your reading challenge {{year}}",
+    "fixedNote": "Set how many books you want to read this year. <strong>This goal is fixed and cannot be changed later.</strong>",
+    "numberOfBooks": "Number of books",
+    "recommendation": "Recommended: 12-52 books (1 per month to 1 per week)",
+    "cancel": "Cancel",
+    "confirmGoal": "Confirm goal",
+    "fixed": "Fixed",
+    "progress": "Progress",
+    "booksCount": "{{read}} / {{goal}} books",
+    "completed": "🎉 Congratulations! You've completed your reading challenge",
+    "remaining": "You need {{count}} more books to complete your goal"
+  },
+  "achievements": {
+    "title": "Achievements",
+    "viewAll": "View all",
+    "viewLess": "View less",
+    "noAchievementsOwn": "You haven't unlocked any achievements yet. Keep reading! 📚",
+    "noAchievementsOther": "This user hasn't unlocked any achievements yet.",
+    "toUnlock": "To unlock",
+    "categories": {
+      "reading": "Reading",
+      "social": "Social",
+      "explorer": "Explorer",
+      "streak": "Streaks",
+      "special": "Special"
+    }
+  },
+  "bookshelf": {
+    "all": "All",
+    "reading": "Reading",
+    "toRead": "To read",
+    "read": "Read",
+    "errorLoading": "Error loading your library",
+    "emptyLibrary": "Your library is empty",
+    "noBooks": "You have no books {{status}}",
+    "searchAndAdd": "Search for books and add them to your library",
+    "exploreBooks": "Explore books",
+    "statusReading": "currently reading",
+    "statusToRead": "to read",
+    "statusRead": "read"
+  },
+  "social": {
+    "followers": "followers",
+    "following": "following",
+    "loading": "Loading...",
+    "favoriteBooks": "Favorite books"
+  },
+  "canonicalGenres": {
+    "ficción": "Fiction",
+    "juvenil": "Young Adult",
+    "no ficción": "Non-Fiction",
+    "misterio y thriller": "Mystery & Thriller",
+    "romance": "Romance",
+    "fantasía": "Fantasy",
+    "ciencia ficción": "Science Fiction",
+    "terror": "Horror",
+    "histórica": "Historical",
+    "drama": "Drama",
+    "poesía": "Poetry",
+    "ensayo": "Essay",
+    "biografía": "Biography",
+    "educación": "Education",
+    "cómic y novela gráfica": "Comics & Graphic Novels"
+  },
   "activity": {
     "rated": "rated",
     "with": "with",

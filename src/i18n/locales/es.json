@@ -322,6 +322,75 @@
     "literaryAwards": "Premios literarios",
     "literaryAwardsDesc": "Ganadores de premios internacionales"
   },
+  "readingGoal": {
+    "challenge": "Desafío de lectura {{year}}",
+    "challengeShort": "Desafío {{year}}",
+    "fixedWarning": "¿Cuántos libros te propones leer este año? Una vez establecido, <strong>no podrás cambiarlo</strong>.",
+    "setGoal": "Establecer objetivo",
+    "yourChallenge": "Tu desafío de lectura {{year}}",
+    "fixedNote": "Define cuántos libros quieres leer este año. <strong>Este objetivo es fijo y no podrás modificarlo después.</strong>",
+    "numberOfBooks": "Número de libros",
+    "recommendation": "Recomendado: 12-52 libros (1 libro por mes a 1 por semana)",
+    "cancel": "Cancelar",
+    "confirmGoal": "Confirmar objetivo",
+    "fixed": "Fijo",
+    "progress": "Progreso",
+    "booksCount": "{{read}} / {{goal}} libros",
+    "completed": "🎉 ¡Felicidades! Has completado tu desafío de lectura",
+    "remaining": "Te faltan {{count}} libros para completar tu objetivo"
+  },
+  "achievements": {
+    "title": "Logros",
+    "viewAll": "Ver todos",
+    "viewLess": "Ver menos",
+    "noAchievementsOwn": "Aún no has desbloqueado ningún logro. ¡Sigue leyendo! 📚",
+    "noAchievementsOther": "Este usuario aún no ha desbloqueado logros.",
+    "toUnlock": "Por desbloquear",
+    "categories": {
+      "reading": "Lectura",
+      "social": "Social",
+      "explorer": "Explorador",
+      "streak": "Rachas",
+      "special": "Especiales"
+    }
+  },
+  "bookshelf": {
+    "all": "Todos",
+    "reading": "Leyendo",
+    "toRead": "Por leer",
+    "read": "Leídos",
+    "errorLoading": "Error al cargar tu biblioteca",
+    "emptyLibrary": "Tu biblioteca está vacía",
+    "noBooks": "No tienes libros {{status}}",
+    "searchAndAdd": "Busca libros y añádelos a tu biblioteca",
+    "exploreBooks": "Explorar libros",
+    "statusReading": "leyendo",
+    "statusToRead": "por leer",
+    "statusRead": "leídos"
+  },
+  "social": {
+    "followers": "seguidores",
+    "following": "siguiendo",
+    "loading": "Cargando...",
+    "favoriteBooks": "Libros favoritos"
+  },
+  "canonicalGenres": {
+    "ficción": "Ficción",
+    "juvenil": "Juvenil",
+    "no ficción": "No ficción",
+    "misterio y thriller": "Misterio y Thriller",
+    "romance": "Romance",
+    "fantasía": "Fantasía",
+    "ciencia ficción": "Ciencia ficción",
+    "terror": "Terror",
+    "histórica": "Histórica",
+    "drama": "Drama",
+    "poesía": "Poesía",
+    "ensayo": "Ensayo",
+    "biografía": "Biografía",
+    "educación": "Educación",
+    "cómic y novela gráfica": "Cómic y novela gráfica"
+  },
   "activity": {
     "rated": "calificó",
     "with": "con",

@@ -5,29 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAchievements, Achievement } from "@/hooks/useAchievements";
 import { AchievementBadge } from "./AchievementBadge";
+import { useTranslation } from "react-i18next";
 
 interface AchievementsSectionProps {
   userId?: string;
   isOwnProfile?: boolean;
 }
 
-const CATEGORY_LABELS: Record<Achievement["category"], string> = {
-  reading: "Lectura",
-  social: "Social",
-  explorer: "Explorador",
-  streak: "Rachas",
-  special: "Especiales",
-};
-
 const CATEGORY_ORDER: Achievement["category"][] = [
-  "reading",
-  "streak",
-  "explorer",
-  "social",
-  "special",
+  "reading", "streak", "explorer", "social", "special",
 ];
 
 export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ userId, isOwnProfile = true }) => {
+  const { t } = useTranslation();
   const { data: achievements, isLoading, error } = useAchievements(userId);
   const [expanded, setExpanded] = useState(false);
 
@@ -47,27 +37,14 @@ export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ userId
     );
   }
 
-  if (error || !achievements) {
-    return null;
-  }
+  if (error || !achievements) return null;
 
   const unlockedAchievements = achievements.filter(a => a.unlocked);
   const lockedAchievements = achievements.filter(a => !a.unlocked);
 
-  // Group achievements by category
-  const groupedUnlocked = CATEGORY_ORDER.reduce((acc, category) => {
-    const categoryAchievements = unlockedAchievements.filter(a => a.category === category);
-    if (categoryAchievements.length > 0) {
-      acc[category] = categoryAchievements;
-    }
-    return acc;
-  }, {} as Record<string, Achievement[]>);
-
   const groupedLocked = CATEGORY_ORDER.reduce((acc, category) => {
     const categoryAchievements = lockedAchievements.filter(a => a.category === category);
-    if (categoryAchievements.length > 0) {
-      acc[category] = categoryAchievements;
-    }
+    if (categoryAchievements.length > 0) acc[category] = categoryAchievements;
     return acc;
   }, {} as Record<string, Achievement[]>);
 
@@ -76,35 +53,23 @@ export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ userId
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-foreground flex items-center gap-2">
           <Award className="w-5 h-5 text-primary" />
-          Logros
+          {t("achievements.title")}
           <span className="text-sm font-normal text-muted-foreground">
             ({unlockedAchievements.length}/{achievements.length})
           </span>
         </h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setExpanded(!expanded)}
-          className="text-xs"
-        >
+        <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)} className="text-xs">
           {expanded ? (
-            <>
-              Ver menos <ChevronUp className="w-4 h-4 ml-1" />
-            </>
+            <>{t("achievements.viewLess")} <ChevronUp className="w-4 h-4 ml-1" /></>
           ) : (
-            <>
-              Ver todos <ChevronDown className="w-4 h-4 ml-1" />
-            </>
+            <>{t("achievements.viewAll")} <ChevronDown className="w-4 h-4 ml-1" /></>
           )}
         </Button>
       </div>
 
-      {/* Unlocked achievements summary */}
       {unlockedAchievements.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-4">
-          {isOwnProfile 
-            ? "Aún no has desbloqueado ningún logro. ¡Sigue leyendo! 📚"
-            : "Este usuario aún no ha desbloqueado logros."}
+          {isOwnProfile ? t("achievements.noAchievementsOwn") : t("achievements.noAchievementsOther")}
         </p>
       ) : (
         <div className="flex flex-wrap gap-2 mb-2">
@@ -119,24 +84,17 @@ export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ userId
         </div>
       )}
 
-      {/* Expanded view with all achievements */}
       {expanded && (
         <div className="mt-6 space-y-4 border-t border-border pt-4">
-          <p className="text-sm font-medium text-muted-foreground">Por desbloquear</p>
-          
+          <p className="text-sm font-medium text-muted-foreground">{t("achievements.toUnlock")}</p>
           {Object.entries(groupedLocked).map(([category, categoryAchievements]) => (
             <div key={category}>
               <p className="text-xs text-muted-foreground mb-2">
-                {CATEGORY_LABELS[category as Achievement["category"]]}
+                {t(`achievements.categories.${category}`)}
               </p>
               <div className="flex flex-wrap gap-2">
                 {categoryAchievements.map(achievement => (
-                  <AchievementBadge 
-                    key={achievement.id} 
-                    achievement={achievement} 
-                    size="sm"
-                    showProgress
-                  />
+                  <AchievementBadge key={achievement.id} achievement={achievement} size="sm" showProgress />
                 ))}
               </div>
             </div>
