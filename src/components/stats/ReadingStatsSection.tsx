@@ -45,7 +45,7 @@ export const ReadingStatsSection: React.FC<ReadingStatsSectionProps> = ({ userId
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center"><span className="text-xl">📚</span></div>
             <div>
               <p className="text-sm text-muted-foreground">{t("stats.favoriteGenre")}</p>
-              <p className="font-semibold text-foreground">{stats.topGenre.charAt(0).toUpperCase() + stats.topGenre.slice(1)}</p>
+              <p className="font-semibold text-foreground">{t(`canonicalGenres.${stats.topGenre}`, stats.topGenre.charAt(0).toUpperCase() + stats.topGenre.slice(1))}</p>
             </div>
           </div>
         </Card>

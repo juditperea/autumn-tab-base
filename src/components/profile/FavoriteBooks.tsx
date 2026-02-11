@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Heart, Plus, RefreshCw } from "lucide-react";
 import { useFavoriteBooks } from "@/hooks/useFavoriteBooks";
+import { useTranslation } from "react-i18next";
 
 interface FavoriteBooksProps {
   userId: string;
@@ -16,6 +17,7 @@ export const FavoriteBooks: React.FC<FavoriteBooksProps> = ({
   isEditMode = false,
   onAddClick 
 }) => {
+  const { t } = useTranslation();
   const { data: favorites, isLoading } = useFavoriteBooks(userId);
 
   if (isLoading) {
@@ -88,7 +90,7 @@ export const FavoriteBooks: React.FC<FavoriteBooksProps> = ({
     <div className="p-4 bg-card rounded-xl shadow-card">
       <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
         <Heart className="w-4 h-4 text-primary" />
-        Libros favoritos
+        {t("social.favoriteBooks")}
       </h3>
       <div className="grid grid-cols-4 gap-2">
         {positions.map((position) => {

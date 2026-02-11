@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useSetReadingGoal } from "@/hooks/useReadingGoal";
+import { useTranslation } from "react-i18next";
 
 interface ReadingGoalCardProps {
   readingGoal: number | null;
@@ -27,6 +28,7 @@ export const ReadingGoalCard: React.FC<ReadingGoalCardProps> = ({
   booksRead,
   isOwner = false,
 }) => {
+  const { t } = useTranslation();
   const [showDialog, setShowDialog] = useState(false);
   const [goalInput, setGoalInput] = useState("20");
   const setGoalMutation = useSetReadingGoal();
@@ -44,7 +46,6 @@ export const ReadingGoalCard: React.FC<ReadingGoalCardProps> = ({
     }
   };
 
-  // No goal set for current year
   if (!hasGoalThisYear && isOwner) {
     return (
       <>
@@ -55,19 +56,12 @@ export const ReadingGoalCard: React.FC<ReadingGoalCardProps> = ({
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-foreground mb-1">
-                Desafío de lectura {currentYear}
+                {t("readingGoal.challenge", { year: currentYear })}
               </h3>
-              <p className="text-sm text-muted-foreground mb-3">
-                ¿Cuántos libros te propones leer este año? Una vez establecido, 
-                <strong className="text-foreground"> no podrás cambiarlo</strong>.
-              </p>
-              <Button
-                onClick={() => setShowDialog(true)}
-                className="gradient-autumn text-white"
-                size="sm"
-              >
+              <p className="text-sm text-muted-foreground mb-3" dangerouslySetInnerHTML={{ __html: t("readingGoal.fixedWarning") }} />
+              <Button onClick={() => setShowDialog(true)} className="gradient-autumn text-white" size="sm">
                 <Sparkles className="w-4 h-4 mr-2" />
-                Establecer objetivo
+                {t("readingGoal.setGoal")}
               </Button>
             </div>
           </div>
@@ -78,42 +72,20 @@ export const ReadingGoalCard: React.FC<ReadingGoalCardProps> = ({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Target className="w-5 h-5 text-primary" />
-                Tu desafío de lectura {currentYear}
+                {t("readingGoal.yourChallenge", { year: currentYear })}
               </DialogTitle>
-              <DialogDescription>
-                Define cuántos libros quieres leer este año. 
-                <strong className="text-foreground"> Este objetivo es fijo y no podrás modificarlo después.</strong>
-              </DialogDescription>
+              <DialogDescription dangerouslySetInnerHTML={{ __html: t("readingGoal.fixedNote") }} />
             </DialogHeader>
-            
             <div className="py-4">
-              <label className="text-sm font-medium mb-2 block">
-                Número de libros
-              </label>
-              <Input
-                type="number"
-                min="1"
-                max="500"
-                value={goalInput}
-                onChange={(e) => setGoalInput(e.target.value)}
-                className="text-2xl text-center font-bold"
-              />
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Recomendado: 12-52 libros (1 libro por mes a 1 por semana)
-              </p>
+              <label className="text-sm font-medium mb-2 block">{t("readingGoal.numberOfBooks")}</label>
+              <Input type="number" min="1" max="500" value={goalInput} onChange={(e) => setGoalInput(e.target.value)} className="text-2xl text-center font-bold" />
+              <p className="text-xs text-muted-foreground mt-2 text-center">{t("readingGoal.recommendation")}</p>
             </div>
-
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDialog(false)}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSetGoal}
-                disabled={setGoalMutation.isPending}
-                className="gradient-autumn text-white"
-              >
+              <Button variant="outline" onClick={() => setShowDialog(false)}>{t("readingGoal.cancel")}</Button>
+              <Button onClick={handleSetGoal} disabled={setGoalMutation.isPending} className="gradient-autumn text-white">
                 <Lock className="w-4 h-4 mr-2" />
-                Confirmar objetivo
+                {t("readingGoal.confirmGoal")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -122,48 +94,34 @@ export const ReadingGoalCard: React.FC<ReadingGoalCardProps> = ({
     );
   }
 
-  // Goal is set
   if (hasGoalThisYear && readingGoal) {
     return (
       <Card className={`p-4 shadow-card ${isCompleted ? 'bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30' : ''}`}>
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
-            {isCompleted ? (
-              <Trophy className="w-5 h-5 text-yellow-500" />
-            ) : (
-              <Target className="w-5 h-5 text-primary" />
-            )}
-            Desafío {currentYear}
+            {isCompleted ? <Trophy className="w-5 h-5 text-yellow-500" /> : <Target className="w-5 h-5 text-primary" />}
+            {t("readingGoal.challengeShort", { year: currentYear })}
           </h3>
           <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
             <Lock className="w-3 h-3" />
-            Fijo
+            {t("readingGoal.fixed")}
           </span>
         </div>
-        
         <div className="mb-2">
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-muted-foreground">Progreso</span>
-            <span className="font-semibold text-foreground">
-              {booksRead} / {readingGoal} libros
-            </span>
+            <span className="text-muted-foreground">{t("readingGoal.progress")}</span>
+            <span className="font-semibold text-foreground">{t("readingGoal.booksCount", { read: booksRead, goal: readingGoal })}</span>
           </div>
           <Progress value={progress} className="h-3" />
         </div>
-
         {isCompleted ? (
-          <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">
-            🎉 ¡Felicidades! Has completado tu desafío de lectura
-          </p>
+          <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">{t("readingGoal.completed")}</p>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            Te faltan {readingGoal - booksRead} libros para completar tu objetivo
-          </p>
+          <p className="text-sm text-muted-foreground">{t("readingGoal.remaining", { count: readingGoal - booksRead })}</p>
         )}
       </Card>
     );
   }
 
-  // Viewing someone else's profile without a goal
   return null;
 };
