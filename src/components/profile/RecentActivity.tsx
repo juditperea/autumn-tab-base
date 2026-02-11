@@ -3,16 +3,18 @@ import { BookOpen, Clock, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useUserBooks } from "@/hooks/useUserBooks";
 import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 
 interface RecentActivityProps {
   limit?: number;
 }
 
 export const RecentActivity = ({ limit = 5 }: RecentActivityProps) => {
+  const { t, i18n } = useTranslation();
   const { data: userBooks, isLoading } = useUserBooks();
+  const dateLocale = i18n.language.startsWith("en") ? enUS : es;
 
-  // Get most recently updated books
   const recentBooks = userBooks
     ?.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     .slice(0, limit);
@@ -32,7 +34,7 @@ export const RecentActivity = ({ limit = 5 }: RecentActivityProps) => {
       <Card className="p-6 text-center">
         <BookOpen className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">
-          No tienes actividad reciente
+          {t("activity.noActivity")}
         </p>
       </Card>
     );
@@ -40,10 +42,10 @@ export const RecentActivity = ({ limit = 5 }: RecentActivityProps) => {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "reading": return "Leyendo";
-      case "to_read": return "Añadido a Por leer";
-      case "read": return "Marcado como leído";
-      case "dnf": return "No terminado";
+      case "reading": return t("status.reading");
+      case "to_read": return t("activity.addedToRead");
+      case "read": return t("activity.markedAsRead");
+      case "dnf": return t("activity.notFinished");
       default: return status;
     }
   };
@@ -96,7 +98,7 @@ export const RecentActivity = ({ limit = 5 }: RecentActivityProps) => {
                   <Clock className="w-3 h-3" />
                   {formatDistanceToNow(new Date(userBook.updated_at), { 
                     addSuffix: true,
-                    locale: es 
+                    locale: dateLocale 
                   })}
                 </p>
               </div>

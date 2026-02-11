@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { Card } from "@/components/ui/card";
 import { Layers } from "lucide-react";
 import { GenreStats } from "@/hooks/useReadingStats";
+import { useTranslation } from "react-i18next";
 
 interface GenreDistributionChartProps {
   data: GenreStats[];
@@ -34,6 +35,8 @@ const displayGenre = (genre: string): string => {
 };
 
 export const GenreDistributionChart: React.FC<GenreDistributionChartProps> = ({ data }) => {
+  const { t } = useTranslation();
+
   const chartData = data.map(d => ({
     ...d,
     displayName: displayGenre(d.genre),
@@ -44,10 +47,10 @@ export const GenreDistributionChart: React.FC<GenreDistributionChartProps> = ({ 
       <Card className="p-4 shadow-card">
         <div className="flex items-center gap-2 mb-4">
           <Layers className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold text-foreground">Géneros leídos</h3>
+          <h3 className="font-semibold text-foreground">{t("stats.genresRead")}</h3>
         </div>
         <p className="text-sm text-muted-foreground text-center py-8">
-          Aún no hay suficientes datos de géneros
+          {t("stats.noGenreDataShort")}
         </p>
       </Card>
     );
@@ -57,7 +60,7 @@ export const GenreDistributionChart: React.FC<GenreDistributionChartProps> = ({ 
     <Card className="p-4 shadow-card">
       <div className="flex items-center gap-2 mb-4">
         <Layers className="w-5 h-5 text-primary" />
-        <h3 className="font-semibold text-foreground">Géneros leídos</h3>
+        <h3 className="font-semibold text-foreground">{t("stats.genresRead")}</h3>
       </div>
       
       <div className="h-56">
@@ -87,7 +90,7 @@ export const GenreDistributionChart: React.FC<GenreDistributionChartProps> = ({ 
                 borderRadius: '8px',
                 fontSize: '12px',
               }}
-              formatter={(value: number, name: string) => [`${value} libros`, name]}
+              formatter={(value: number, name: string) => [`${value} ${t("stats.books")}`, name]}
             />
             <Legend 
               layout="vertical"

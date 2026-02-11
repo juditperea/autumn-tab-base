@@ -4,13 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star, BookOpen, MessageSquare, BookMarked, PartyPopper, Heart } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es, enUS } from 'date-fns/locale';
 import { Activity } from '@/hooks/useActivityFeed';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActivityLikes, useToggleActivityLike } from '@/hooks/useActivityInteractions';
 import { ActivityComments } from './ActivityComments';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -33,14 +34,14 @@ const getActivityIcon = (type: Activity['activity_type']) => {
   }
 };
 
-const getActivityText = (activity: Activity) => {
-  const bookTitle = activity.book?.title || 'un libro';
+const getActivityText = (activity: Activity, t: (key: string) => string) => {
+  const bookTitle = activity.book?.title || t('activity.aBook');
   
   switch (activity.activity_type) {
     case 'rated_book':
       return (
         <span>
-          calificó <strong>{bookTitle}</strong> con{' '}
+          {t('activity.rated')} <strong>{bookTitle}</strong> {t('activity.with')}{' '}
           <Badge variant="secondary" className="ml-1 text-amber-600">
             <Star className="h-3 w-3 mr-0.5 fill-amber-500 text-amber-500" />
             {activity.rating?.toFixed(1)}
@@ -50,19 +51,19 @@ const getActivityText = (activity: Activity) => {
     case 'reviewed_book':
       return (
         <span>
-          escribió una reseña de <strong>{bookTitle}</strong>
+          {t('activity.reviewed')} <strong>{bookTitle}</strong>
         </span>
       );
     case 'started_reading':
       return (
         <span>
-          empezó a leer <strong>{bookTitle}</strong>
+          {t('activity.startedReading')} <strong>{bookTitle}</strong>
         </span>
       );
     case 'finished_book':
       return (
         <span>
-          terminó de leer <strong>{bookTitle}</strong>
+          {t('activity.finishedReading')} <strong>{bookTitle}</strong>
           {activity.rating && (
             <Badge variant="secondary" className="ml-1 text-amber-600">
               <Star className="h-3 w-3 mr-0.5 fill-amber-500 text-amber-500" />
@@ -72,20 +73,22 @@ const getActivityText = (activity: Activity) => {
         </span>
       );
     case 'joined_club':
-      return <span>se unió a un club de lectura</span>;
+      return <span>{t('activity.joinedClub')}</span>;
     default:
-      return <span>hizo algo con {bookTitle}</span>;
+      return <span>{t('activity.didSomething')} {bookTitle}</span>;
   }
 };
 
 export const ActivityCard = ({ activity }: ActivityCardProps) => {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const { data: likesData } = useActivityLikes(activity.id);
   const toggleLike = useToggleActivityLike();
+  const dateLocale = i18n.language.startsWith('en') ? enUS : es;
 
   const timeAgo = formatDistanceToNow(new Date(activity.created_at), {
     addSuffix: true,
-    locale: es,
+    locale: dateLocale,
   });
 
   const handleLike = () => {
@@ -100,7 +103,6 @@ export const ActivityCard = ({ activity }: ActivityCardProps) => {
     <Card className="hover:bg-muted/50 transition-colors">
       <CardContent className="p-4">
         <div className="flex gap-3">
-          {/* Book cover */}
           {activity.book?.cover_url && (
             <Link to={`/libro/${activity.book.id}`} className="flex-shrink-0">
               <img
@@ -112,7 +114,6 @@ export const ActivityCard = ({ activity }: ActivityCardProps) => {
           )}
           
           <div className="flex-1 min-w-0">
-            {/* User info and activity */}
             <div className="flex items-start gap-2">
               <Link to={`/perfil/${activity.user.username}`}>
                 <Avatar className="h-8 w-8">
@@ -131,7 +132,7 @@ export const ActivityCard = ({ activity }: ActivityCardProps) => {
                   >
                     {activity.user.full_name || activity.user.username}
                   </Link>{' '}
-                  {getActivityText(activity)}
+                  {getActivityText(activity, t)}
                 </p>
                 
                 <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
@@ -141,7 +142,6 @@ export const ActivityCard = ({ activity }: ActivityCardProps) => {
               </div>
             </div>
 
-            {/* Like and comment actions */}
             <div className="flex items-center gap-3 mt-3">
               <Button
                 variant="ghost"
@@ -162,7 +162,6 @@ export const ActivityCard = ({ activity }: ActivityCardProps) => {
                 {likesData?.count ? likesData.count : ""}
               </Button>
 
-              {/* Comments section */}
               <ActivityComments activityId={activity.id} />
             </div>
           </div>

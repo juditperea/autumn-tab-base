@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Trash2, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useActivityComments,
   useAddActivityComment,
   useDeleteActivityComment,
 } from "@/hooks/useActivityInteractions";
+import { useTranslation } from "react-i18next";
 
 interface ActivityCommentsProps {
   activityId: string;
@@ -19,8 +20,10 @@ interface ActivityCommentsProps {
 
 export const ActivityComments = ({ activityId }: ActivityCommentsProps) => {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const [newComment, setNewComment] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
+  const dateLocale = i18n.language.startsWith("en") ? enUS : es;
 
   const { data: comments, isLoading } = useActivityComments(activityId);
   const addComment = useAddActivityComment();
@@ -50,15 +53,14 @@ export const ActivityComments = ({ activityId }: ActivityCommentsProps) => {
         onClick={() => setIsExpanded(true)}
       >
         {comments && comments.length > 0
-          ? `Ver ${comments.length} comentario${comments.length > 1 ? "s" : ""}`
-          : "Comentar"}
+          ? t(comments.length > 1 ? "activity.viewComments_plural" : "activity.viewComments", { count: comments.length })
+          : t("activity.comment")}
       </Button>
     );
   }
 
   return (
     <div className="mt-3 pt-3 border-t border-border space-y-3">
-      {/* Comments list */}
       {isLoading ? (
         <div className="flex justify-center py-2">
           <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -89,7 +91,7 @@ export const ActivityComments = ({ activityId }: ActivityCommentsProps) => {
                   <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(comment.created_at), {
                       addSuffix: true,
-                      locale: es,
+                      locale: dateLocale,
                     })}
                   </span>
                   {user?.id === comment.user_id && (
@@ -110,7 +112,6 @@ export const ActivityComments = ({ activityId }: ActivityCommentsProps) => {
         </div>
       ) : null}
 
-      {/* Add comment form */}
       {user ? (
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Avatar className="w-6 h-6 flex-shrink-0">
@@ -123,7 +124,7 @@ export const ActivityComments = ({ activityId }: ActivityCommentsProps) => {
             <Textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Escribe un comentario..."
+              placeholder={t("activity.writeComment")}
               className="min-h-[36px] h-9 py-2 resize-none text-sm"
               rows={1}
             />
@@ -144,9 +145,9 @@ export const ActivityComments = ({ activityId }: ActivityCommentsProps) => {
       ) : (
         <p className="text-xs text-muted-foreground text-center">
           <Link to="/auth" className="text-primary hover:underline">
-            Inicia sesión
+            {t("activity.loginToComment")}
           </Link>{" "}
-          para comentar
+          {t("activity.toComment")}
         </p>
       )}
 
@@ -156,7 +157,7 @@ export const ActivityComments = ({ activityId }: ActivityCommentsProps) => {
         className="w-full text-xs text-muted-foreground"
         onClick={() => setIsExpanded(false)}
       >
-        Ocultar comentarios
+        {t("activity.hideComments")}
       </Button>
     </div>
   );

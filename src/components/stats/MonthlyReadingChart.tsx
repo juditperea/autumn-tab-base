@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { Card } from "@/components/ui/card";
 import { BookOpen } from "lucide-react";
 import { MonthlyStats } from "@/hooks/useReadingStats";
+import { useTranslation } from "react-i18next";
 
 interface MonthlyReadingChartProps {
   data: MonthlyStats[];
@@ -25,15 +26,22 @@ export const MonthlyReadingChart: React.FC<MonthlyReadingChartProps> = ({
   data, 
   themeColor = "orange" 
 }) => {
+  const { t } = useTranslation();
   const currentMonth = new Date().getMonth();
   const barColor = getBarColor(themeColor);
   const maxBooks = Math.max(...data.map(d => d.books), 1);
+
+  const monthNames = t("stats.monthNames", { returnObjects: true }) as string[];
+  const localizedData = data.map((d, i) => ({
+    ...d,
+    monthLabel: monthNames[i] || d.monthLabel,
+  }));
 
   return (
     <Card className="p-4 shadow-card">
       <div className="flex items-center gap-2 mb-4">
         <BookOpen className="w-5 h-5 text-primary" />
-        <h3 className="font-semibold text-foreground">Libros por mes</h3>
+        <h3 className="font-semibold text-foreground">{t("stats.booksPerMonth")}</h3>
         <span className="text-xs text-muted-foreground ml-auto">
           {new Date().getFullYear()}
         </span>
@@ -41,7 +49,7 @@ export const MonthlyReadingChart: React.FC<MonthlyReadingChartProps> = ({
       
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+          <BarChart data={localizedData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
             <XAxis 
               dataKey="monthLabel" 
               tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
@@ -64,14 +72,14 @@ export const MonthlyReadingChart: React.FC<MonthlyReadingChartProps> = ({
                 fontSize: '12px',
               }}
               labelStyle={{ color: 'hsl(var(--foreground))' }}
-              formatter={(value: number) => [`${value} libros`, 'Leídos']}
+              formatter={(value: number) => [`${value} ${t("stats.books")}`, t("stats.read")]}
             />
             <Bar 
               dataKey="books" 
               radius={[4, 4, 0, 0]}
               maxBarSize={40}
             >
-              {data.map((entry, index) => (
+              {localizedData.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`}
                   fill={index === currentMonth ? barColor : `${barColor}66`}
@@ -84,7 +92,7 @@ export const MonthlyReadingChart: React.FC<MonthlyReadingChartProps> = ({
 
       {data.every(d => d.books === 0) && (
         <p className="text-sm text-muted-foreground text-center mt-2">
-          Aún no has marcado libros como leídos este año
+          {t("stats.noGenreData")}
         </p>
       )}
     </Card>
