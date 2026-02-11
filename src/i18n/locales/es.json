@@ -306,7 +306,13 @@
     "totalBooks": "Total de libros",
     "totalPages": "Total de páginas",
     "couldNotLoad": "No se pudieron cargar las estadísticas",
-    "noGenreData": "Aún no hay datos suficientes para mostrar géneros. Añade más lecturas o edita los géneros del libro."
+    "noGenreData": "Aún no hay datos suficientes para mostrar géneros. Añade más lecturas o edita los géneros del libro.",
+    "booksPerMonth": "Libros por mes",
+    "genresRead": "Géneros leídos",
+    "noGenreDataShort": "Aún no hay suficientes datos de géneros",
+    "books": "libros",
+    "read": "Leídos",
+    "monthNames": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
   },
   "collections": {
     "modernClassics": "Clásicos modernos",
@@ -315,6 +321,31 @@
     "mostReadDesc": "Libros populares en todo el mundo",
     "literaryAwards": "Premios literarios",
     "literaryAwardsDesc": "Ganadores de premios internacionales"
+  },
+  "activity": {
+    "rated": "calificó",
+    "with": "con",
+    "reviewed": "escribió una reseña de",
+    "startedReading": "empezó a leer",
+    "finishedReading": "terminó de leer",
+    "joinedClub": "se unió a un club de lectura",
+    "didSomething": "hizo algo con",
+    "aBook": "un libro",
+    "feedEmpty": "Tu feed está vacío",
+    "feedEmptyDesc": "Sigue a otros lectores para ver su actividad aquí",
+    "discoverReaders": "Descubrir lectores",
+    "feedError": "Error al cargar el feed de actividad",
+    "comment": "Comentar",
+    "viewComments": "Ver {{count}} comentario",
+    "viewComments_plural": "Ver {{count}} comentarios",
+    "hideComments": "Ocultar comentarios",
+    "writeComment": "Escribe un comentario...",
+    "loginToComment": "Inicia sesión",
+    "toComment": "para comentar",
+    "noActivity": "No tienes actividad reciente",
+    "addedToRead": "Añadido a Por leer",
+    "markedAsRead": "Marcado como leído",
+    "notFinished": "No terminado"
   },
   "common": {
     "error": "Error",

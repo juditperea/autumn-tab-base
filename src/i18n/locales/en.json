@@ -306,7 +306,13 @@
     "totalBooks": "Total books",
     "totalPages": "Total pages",
     "couldNotLoad": "Could not load statistics",
-    "noGenreData": "Not enough data to show genres yet. Add more reads or edit book genres."
+    "noGenreData": "Not enough data to show genres yet. Add more reads or edit book genres.",
+    "booksPerMonth": "Books per month",
+    "genresRead": "Genres read",
+    "noGenreDataShort": "Not enough genre data yet",
+    "books": "books",
+    "read": "Read",
+    "monthNames": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
   },
   "collections": {
     "modernClassics": "Modern classics",
@@ -315,6 +321,31 @@
     "mostReadDesc": "Popular books worldwide",
     "literaryAwards": "Literary awards",
     "literaryAwardsDesc": "International award winners"
+  },
+  "activity": {
+    "rated": "rated",
+    "with": "with",
+    "reviewed": "wrote a review of",
+    "startedReading": "started reading",
+    "finishedReading": "finished reading",
+    "joinedClub": "joined a book club",
+    "didSomething": "did something with",
+    "aBook": "a book",
+    "feedEmpty": "Your feed is empty",
+    "feedEmptyDesc": "Follow other readers to see their activity here",
+    "discoverReaders": "Discover readers",
+    "feedError": "Error loading activity feed",
+    "comment": "Comment",
+    "viewComments": "View {{count}} comment",
+    "viewComments_plural": "View {{count}} comments",
+    "hideComments": "Hide comments",
+    "writeComment": "Write a comment...",
+    "loginToComment": "Log in",
+    "toComment": "to comment",
+    "noActivity": "No recent activity",
+    "addedToRead": "Added to reading list",
+    "markedAsRead": "Marked as read",
+    "notFinished": "Did not finish"
   },
   "common": {
     "error": "Error",
