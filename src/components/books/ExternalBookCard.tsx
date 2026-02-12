@@ -10,17 +10,18 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAddToShelf, useUpdateUserBook } from "@/hooks/useUserBooks";
 import { QuickRating } from "./QuickRating";
+import { useTranslation } from "react-i18next";
 
 interface ExternalBookCardProps {
   book: ExternalBook;
 }
 
-// Render stars for external rating (1-5 scale)
 const ExternalRatingStars = ({ rating, count, source }: { 
   rating: number; 
   count: number; 
   source: string;
 }) => {
+  const { t } = useTranslation();
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating - fullStars >= 0.5;
   
@@ -44,13 +45,14 @@ const ExternalRatingStars = ({ rating, count, source }: {
         ))}
       </div>
       <span>
-        ({count > 0 ? count.toLocaleString() : "0"} en {sourceName})
+        ({count > 0 ? count.toLocaleString() : "0"} {t("bookCard.reviewsIn", { source: sourceName })})
       </span>
     </div>
   );
 };
 
 export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -58,15 +60,12 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
   const addToShelf = useAddToShelf();
   const updateUserBook = useUpdateUserBook();
   
-  // Track if book was added and its ID
   const [addedBookId, setAddedBookId] = useState<string | null>(null);
   const [userBookId, setUserBookId] = useState<string | null>(null);
   const [userRating, setUserRating] = useState<number | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
 
-  // Navigate to book detail - adds book to DB first if needed
   const handleCardClick = async (e: React.MouseEvent) => {
-    // Don't navigate if clicking on interactive elements
     const target = e.target as HTMLElement;
     if (
       target.closest('button') || 
@@ -84,8 +83,8 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
     } catch {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudo cargar el libro",
+        title: t("common.error"),
+        description: t("bookCard.couldNotLoad"),
       });
       setIsNavigating(false);
     }
@@ -99,23 +98,22 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
       
       if (result.existing) {
         toast({
-          title: "Libro ya existe",
-          description: "Este libro ya estaba en la base de datos",
+          title: t("bookCard.bookExists"),
+          description: t("bookCard.bookExistsDesc"),
         });
       } else {
         toast({
-          title: "Libro añadido",
-          description: "El libro se ha añadido correctamente",
+          title: t("bookCard.bookAdded"),
+          description: t("bookCard.bookAddedDesc"),
         });
       }
       
-      // Navigate to the book detail page
       navigate(`/libro/${result.id}`);
     } catch {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudo añadir el libro",
+        title: t("common.error"),
+        description: t("bookCard.couldNotAdd"),
       });
     }
   };
@@ -123,23 +121,19 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
   const handleAddWithRating = async (rating: number) => {
     if (!user) {
       toast({
-        title: "Inicia sesión",
-        description: "Debes iniciar sesión para puntuar libros",
+        title: t("bookCard.loginToRate"),
+        description: t("bookCard.loginToRateDesc"),
       });
       return;
     }
 
     try {
-      // First add the book to the database
       const bookResult = await addBook.mutateAsync(book);
       setAddedBookId(bookResult.id);
       
-      // Then add to user's shelf with rating
       if (userBookId) {
-        // Already in shelf, just update rating
         await updateUserBook.mutateAsync({ id: userBookId, rating });
       } else {
-        // Add to shelf with rating
         const shelfResult = await addToShelf.mutateAsync({ 
           bookId: bookResult.id, 
           status: "read", 
@@ -151,24 +145,22 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
       setUserRating(rating);
       
       toast({
-        title: "¡Libro puntuado!",
-        description: `Has puntuado "${book.title}" con ${rating}/10`,
+        title: t("bookCard.bookRated"),
+        description: t("bookCard.bookRatedDesc", { title: book.title, rating }),
       });
     } catch {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudo guardar la puntuación",
+        title: t("common.error"),
+        description: t("bookCard.couldNotRate"),
       });
     }
   };
 
   const sourceLabel = book.source === "google_books" ? "Google Books" : 
-                      book.source === "merged" ? "Múltiples fuentes" : "OpenLibrary";
+                      book.source === "merged" ? t("bookCard.multipleSources") : "OpenLibrary";
   
-  // Show external rating if available
   const hasExternalRating = book.external_rating && book.external_rating > 0;
-
   const isLoading = addBook.isPending || isNavigating;
 
   return (
@@ -206,7 +198,6 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
             {book.authors.join(", ")}
           </p>
           
-          {/* External rating as orientation */}
           {hasExternalRating && (
             <div className="mb-2">
               <ExternalRatingStars 
@@ -238,7 +229,7 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
             {book.page_count && (
               <span className="flex items-center gap-1">
                 <BookOpen className="w-3 h-3" />
-                {book.page_count} pág.
+                {book.page_count} {t("bookCard.pages")}
               </span>
             )}
             {book.language && (
@@ -249,7 +240,6 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
             )}
           </div>
 
-          {/* Quick Rating for logged in users */}
           {user && (
             <div className="mb-3 pb-3 border-b border-border" data-interactive="true">
               <QuickRating
@@ -261,7 +251,7 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
               {userRating && (
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                   <Check className="w-3 h-3 text-secondary" />
-                  Añadido a tu biblioteca
+                  {t("bookCard.addedToLibrary")}
                 </p>
               )}
             </div>
@@ -279,7 +269,7 @@ export const ExternalBookCard = ({ book }: ExternalBookCardProps) => {
               ) : (
                 <Plus className="w-4 h-4 mr-2" />
               )}
-              Añadir a la biblioteca
+              {t("bookCard.addToLibrary")}
             </Button>
           )}
         </div>
