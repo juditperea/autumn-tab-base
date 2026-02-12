@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { useTranslation } from "react-i18next";
 
 interface QuickRatingProps {
   bookId: string;
@@ -24,15 +25,15 @@ const getRatingColor = (rating: number): string => {
   return "text-secondary";
 };
 
-const getRatingLabel = (rating: number): string => {
-  if (rating <= 2) return "Muy malo";
-  if (rating <= 4) return "Malo";
-  if (rating <= 5) return "Regular";
-  if (rating <= 6) return "Aceptable";
-  if (rating <= 7) return "Bueno";
-  if (rating <= 8) return "Muy bueno";
-  if (rating <= 9) return "Excelente";
-  return "Obra maestra";
+const getRatingLabelKey = (rating: number): string => {
+  if (rating <= 2) return "ratingLabels.veryBad";
+  if (rating <= 4) return "ratingLabels.bad";
+  if (rating <= 5) return "ratingLabels.average";
+  if (rating <= 6) return "ratingLabels.acceptable";
+  if (rating <= 7) return "ratingLabels.good";
+  if (rating <= 8) return "ratingLabels.veryGood";
+  if (rating <= 9) return "ratingLabels.excellent";
+  return "ratingLabels.masterpiece";
 };
 
 export const QuickRating = ({
@@ -41,6 +42,7 @@ export const QuickRating = ({
   disabled = false,
   size = "sm",
 }: QuickRatingProps) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [localValue, setLocalValue] = useState<number>(currentRating ?? 7);
   const [isSaving, setIsSaving] = useState(false);
@@ -76,7 +78,7 @@ export const QuickRating = ({
             disabled && "opacity-50 cursor-not-allowed",
             textSize
           )}
-          title={currentRating ? `Tu puntuación: ${currentRating}/10` : "Puntuar libro"}
+          title={currentRating ? t("bookCard.yourRating", { rating: currentRating }) : t("bookCard.rateBook")}
         >
           <Star
             className={cn(
@@ -87,7 +89,7 @@ export const QuickRating = ({
           {currentRating ? (
             <span className="font-semibold text-foreground">{currentRating}</span>
           ) : (
-            <span className="text-muted-foreground">Puntuar</span>
+            <span className="text-muted-foreground">{t("bookCard.rate")}</span>
           )}
         </button>
       </PopoverTrigger>
@@ -99,7 +101,7 @@ export const QuickRating = ({
             </span>
             <span className="text-muted-foreground">/10</span>
             <p className={cn("text-sm font-medium mt-1", getRatingColor(localValue))}>
-              {getRatingLabel(localValue)}
+              {t(getRatingLabelKey(localValue))}
             </p>
           </div>
 
@@ -127,7 +129,7 @@ export const QuickRating = ({
             {isSaving ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
             ) : null}
-            {currentRating ? "Actualizar" : "Guardar"} puntuación
+            {currentRating ? t("bookCard.updateRating") : t("bookCard.saveRating")}
           </Button>
         </div>
       </PopoverContent>
