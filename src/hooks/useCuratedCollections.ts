@@ -23,20 +23,20 @@ function getUserLanguage(): string {
 export const CURATED_COLLECTIONS = [
   {
     id: "classics",
-    title: "Clásicos modernos",
-    description: "Obras atemporales que definieron la literatura",
+    titleKey: "collections.modernClassics",
+    descriptionKey: "collections.modernClassicsDesc",
     searchTerms: ["Cien años de soledad", "1984", "El principito"],
   },
   {
     id: "popular",
-    title: "Los más leídos",
-    description: "Libros populares en todo el mundo",
+    titleKey: "collections.mostRead",
+    descriptionKey: "collections.mostReadDesc",
     searchTerms: ["Harry Potter", "El código Da Vinci", "Los juegos del hambre"],
   },
   {
     id: "awards",
-    title: "Premios literarios",
-    description: "Ganadores de premios internacionales",
+    titleKey: "collections.literaryAwards",
+    descriptionKey: "collections.literaryAwardsDesc",
     searchTerms: ["La sombra del viento", "Rayuela", "Pedro Páramo"],
   },
 ];
