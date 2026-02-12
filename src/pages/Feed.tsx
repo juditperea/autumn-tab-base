@@ -126,8 +126,8 @@ const Feed = () => {
         {curatedCollections?.map((collection) => (
           <CuratedCollectionSection
             key={collection.id}
-            title={collection.title}
-            description={collection.description}
+            title={t(collection.titleKey)}
+            description={t(collection.descriptionKey)}
             books={collection.books}
             isLoading={isLoadingCollections}
             icon={collection.id === "classics" ? "star" : collection.id === "popular" ? "trending" : "award"}

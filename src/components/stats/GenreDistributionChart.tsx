@@ -30,16 +30,14 @@ const GENRE_COLORS = [
 
 // Genres are already normalized and translated by genreNormalizer.
 // Just capitalize first letter for display if needed.
-const displayGenre = (genre: string): string => {
-  return genre.charAt(0).toUpperCase() + genre.slice(1);
-};
+// Removed — now handled inline with i18n
 
 export const GenreDistributionChart: React.FC<GenreDistributionChartProps> = ({ data }) => {
   const { t } = useTranslation();
 
   const chartData = data.map(d => ({
     ...d,
-    displayName: displayGenre(d.genre),
+    displayName: t(`canonicalGenres.${d.genre}`, d.genre.charAt(0).toUpperCase() + d.genre.slice(1)),
   }));
 
   if (data.length === 0) {
