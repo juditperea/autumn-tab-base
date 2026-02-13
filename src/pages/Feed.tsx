@@ -10,6 +10,7 @@ import { useAllCuratedCollections } from "@/hooks/useCuratedCollections";
 import { CuratedCollectionSection } from "@/components/books/CuratedCollectionSection";
 import { FeaturedReviews } from "@/components/reviews/FeaturedReviews";
 import { ActivityFeed } from "@/components/social/ActivityFeed";
+import { RecommendationsSection } from "@/components/books/RecommendationsSection";
 import { useTranslation } from "react-i18next";
 
 const Feed = () => {
@@ -114,6 +115,8 @@ const Feed = () => {
             <ActivityFeed limit={10} />
           </section>
         )}
+
+        {user && <RecommendationsSection limit={8} />}
 
         <section>
           <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2">

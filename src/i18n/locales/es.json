@@ -176,7 +176,15 @@
     "chat": "Chat",
     "membersList": "Miembros",
     "joinToParticipate": "Únete para participar",
-    "accessChat": "Accede al chat y conecta con otros lectores"
+    "accessChat": "Accede al chat y conecta con otros lectores",
+    "noMessages": "No hay mensajes aún.",
+    "beFirstMessage": "¡Sé el primero en escribir!",
+    "writeMessage": "Escribe un mensaje...",
+    "containsSpoiler": "Contiene spoiler",
+    "send": "Enviar",
+    "spoiler": "Spoiler",
+    "showSpoiler": "Mostrar spoiler",
+    "deleteMessage": "Eliminar"
   },
   "book": {
     "notFound": "Libro no encontrado",
@@ -372,7 +380,9 @@
     "followers": "seguidores",
     "following": "siguiendo",
     "loading": "Cargando...",
-    "favoriteBooks": "Libros favoritos"
+    "favoriteBooks": "Libros favoritos",
+    "noFollowersYet": "Aún no tienes seguidores",
+    "notFollowingYet": "No sigues a nadie aún"
   },
   "canonicalGenres": {
     "ficción": "Ficción",
@@ -448,6 +458,49 @@
     "veryGood": "Muy bueno",
     "excellent": "Excelente",
     "masterpiece": "Obra maestra"
+  },
+  "review": {
+    "writeReview": "Escribe tu reseña",
+    "editReview": "Editar reseña",
+    "placeholder": "¿Qué te pareció este libro? Comparte tu opinión...",
+    "tooLong": "Demasiado largo",
+    "containsSpoilers": "Esta reseña contiene spoilers",
+    "publishing": "Publicando...",
+    "saving": "Guardando...",
+    "publish": "Publicar reseña",
+    "saveChanges": "Guardar cambios",
+    "published": "Reseña publicada",
+    "publishedDesc": "Tu reseña ha sido publicada correctamente",
+    "updated": "Reseña actualizada",
+    "updatedDesc": "Tu reseña ha sido actualizada correctamente",
+    "publishError": "No se pudo publicar la reseña",
+    "updateError": "No se pudo actualizar la reseña",
+    "showSpoiler": "Mostrar reseña",
+    "containsSpoilerWarning": "Esta reseña contiene spoilers",
+    "readMore": "Leer más",
+    "showLess": "Mostrar menos",
+    "useful": "Útil",
+    "votes": "votos"
+  },
+  "scanResult": {
+    "bookFound": "¡Libro encontrado!",
+    "alreadyRead": "¿Ya lo leíste? Puntúalo:",
+    "toRead": "Por leer",
+    "reading": "Leyendo",
+    "readWith": "Leído ({{rating}}/10)",
+    "viewDetails": "Ver detalles del libro",
+    "loginRequired": "Inicia sesión",
+    "loginRequiredDesc": "Debes iniciar sesión para añadir libros",
+    "bookAdded": "¡Libro añadido!",
+    "bookAddedRead": "\"{{title}}\" añadido como leído con {{rating}}/10",
+    "bookAddedLibrary": "\"{{title}}\" añadido a tu biblioteca",
+    "addError": "No se pudo añadir el libro",
+    "loadError": "No se pudo cargar el libro"
+  },
+  "recommendations": {
+    "title": "Recomendados para ti",
+    "subtitle": "Basado en tus géneros favoritos y lecturas anteriores",
+    "because": "Por: {{genre}}"
   },
   "common": {
     "error": "Error",
