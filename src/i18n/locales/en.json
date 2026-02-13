@@ -176,7 +176,14 @@
     "chat": "Chat",
     "membersList": "Members",
     "joinToParticipate": "Join to participate",
-    "accessChat": "Access the chat and connect with other readers"
+    "accessChat": "Access the chat and connect with other readers",
+    "noMessages": "No messages yet.",
+    "beFirstMessage": "Be the first to write!",
+    "containsSpoiler": "Contains spoiler",
+    "send": "Send",
+    "spoiler": "Spoiler",
+    "showSpoiler": "Show spoiler",
+    "deleteMessage": "Delete"
   },
   "book": {
     "notFound": "Book not found",
@@ -372,7 +379,9 @@
     "followers": "followers",
     "following": "following",
     "loading": "Loading...",
-    "favoriteBooks": "Favorite books"
+    "favoriteBooks": "Favorite books",
+    "noFollowersYet": "No followers yet",
+    "notFollowingYet": "Not following anyone yet"
   },
   "canonicalGenres": {
     "ficción": "Fiction",
@@ -448,6 +457,49 @@
     "veryGood": "Very good",
     "excellent": "Excellent",
     "masterpiece": "Masterpiece"
+  },
+  "review": {
+    "writeReview": "Write your review",
+    "editReview": "Edit review",
+    "placeholder": "What did you think of this book? Share your opinion...",
+    "tooLong": "Too long",
+    "containsSpoilers": "This review contains spoilers",
+    "publishing": "Publishing...",
+    "saving": "Saving...",
+    "publish": "Publish review",
+    "saveChanges": "Save changes",
+    "published": "Review published",
+    "publishedDesc": "Your review has been published successfully",
+    "updated": "Review updated",
+    "updatedDesc": "Your review has been updated successfully",
+    "publishError": "Could not publish the review",
+    "updateError": "Could not update the review",
+    "showSpoiler": "Show review",
+    "containsSpoilerWarning": "This review contains spoilers",
+    "readMore": "Read more",
+    "showLess": "Show less",
+    "useful": "Useful",
+    "votes": "votes"
+  },
+  "scanResult": {
+    "bookFound": "Book found!",
+    "alreadyRead": "Already read it? Rate it:",
+    "toRead": "To read",
+    "reading": "Reading",
+    "readWith": "Read ({{rating}}/10)",
+    "viewDetails": "View book details",
+    "loginRequired": "Log in",
+    "loginRequiredDesc": "You must log in to add books",
+    "bookAdded": "Book added!",
+    "bookAddedRead": "\"{{title}}\" added as read with {{rating}}/10",
+    "bookAddedLibrary": "\"{{title}}\" added to your library",
+    "addError": "Could not add the book",
+    "loadError": "Could not load the book"
+  },
+  "recommendations": {
+    "title": "Recommended for you",
+    "subtitle": "Based on your favorite genres and past reads",
+    "because": "Because: {{genre}}"
   },
   "common": {
     "error": "Error",
