@@ -18,6 +18,9 @@ const Import = () => {
       </header>
       <div className="p-4 max-w-lg mx-auto">
         <GoodreadsImport />
+        <div className="mt-4 text-center text-xs text-muted-foreground">
+          <p>{t("import.oauthNotAvailable")}</p>
+        </div>
         <div className="mt-6 text-center text-sm text-muted-foreground">
           <p>{t("import.comingSoon")}</p>
         </div>

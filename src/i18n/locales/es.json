@@ -296,7 +296,34 @@
   },
   "import": {
     "title": "Importar biblioteca",
-    "comingSoon": "Próximamente: importación desde StoryGraph, Literal y más"
+    "comingSoon": "Próximamente: importación desde StoryGraph, Literal y más",
+    "goodreadsTitle": "Importar desde Goodreads",
+    "goodreadsDesc": "Migra tu biblioteca de Goodreads a Bookly en pocos pasos",
+    "howToExport": "¿Cómo exportar desde Goodreads?",
+    "step1": "Ve a",
+    "step2": "Haz clic en \"Export Library\"",
+    "step3": "Espera a que se genere el archivo",
+    "step4": "Descarga el archivo CSV",
+    "step5": "Súbelo aquí abajo",
+    "selectFile": "Haz clic para seleccionar el archivo CSV",
+    "invalidFile": "Por favor selecciona un archivo CSV",
+    "changeFile": "Cambiar",
+    "importing": "Importando...",
+    "importLibrary": "Importar biblioteca",
+    "processing": "Procesando libros y descargando metadatos... esto puede tardar un minuto",
+    "successCount": "¡{{count}} libros importados correctamente!",
+    "errorGeneral": "Error al importar. Verifica que el archivo sea válido.",
+    "imported": "Importados",
+    "enriched": "Enriquecidos",
+    "skipped": "Omitidos",
+    "total": "Total",
+    "completed": "¡Importación completada!",
+    "completedDesc": "Se han añadido {{imported}} libros a tu biblioteca con portadas y metadatos de {{enriched}}.",
+    "skippedDesc": "{{count}} libros ya estaban en tu biblioteca.",
+    "someErrors": "Algunos errores",
+    "andMore": "y {{count}} más",
+    "importAnother": "Importar otro archivo",
+    "oauthNotAvailable": "Goodreads cerró su API pública, por lo que solo es posible importar mediante archivo CSV."
   },
   "notFound": {
     "title": "404",
@@ -480,7 +507,10 @@
     "readMore": "Leer más",
     "showLess": "Mostrar menos",
     "useful": "Útil",
-    "votes": "votos"
+    "votes": "votos",
+    "translate": "Traducir reseña",
+    "showOriginal": "Ver original",
+    "translateError": "No se pudo traducir la reseña"
   },
   "scanResult": {
     "bookFound": "¡Libro encontrado!",

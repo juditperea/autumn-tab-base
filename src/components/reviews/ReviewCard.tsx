@@ -9,6 +9,7 @@ import type { Review } from "@/hooks/useReviews";
 import { useVoteReview } from "@/hooks/useReviews";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReviewComments } from "./ReviewComments";
+import { TranslateButton } from "./TranslateButton";
 import { useTranslation } from "react-i18next";
 
 interface ReviewCardProps {
@@ -21,12 +22,14 @@ export const ReviewCard = ({ review, showBookInfo = false }: ReviewCardProps) =>
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [showSpoiler, setShowSpoiler] = useState(false);
+  const [translatedContent, setTranslatedContent] = useState<string | null>(null);
   const voteReview = useVoteReview();
 
-  const isLongContent = review.content.length > 300;
+  const activeContent = translatedContent ?? review.content;
+  const isLongContent = activeContent.length > 300;
   const displayContent = isLongContent && !expanded 
-    ? review.content.slice(0, 300) + "..." 
-    : review.content;
+    ? activeContent.slice(0, 300) + "..." 
+    : activeContent;
 
   const handleVote = (vote: 1 | -1) => {
     if (!user) return;
@@ -104,6 +107,12 @@ export const ReviewCard = ({ review, showBookInfo = false }: ReviewCardProps) =>
               )}
             </Button>
           )}
+          <TranslateButton
+            content={review.content}
+            reviewLanguage={review.language}
+            onTranslation={setTranslatedContent}
+            isTranslated={!!translatedContent}
+          />
         </>
       )}
 
