@@ -295,7 +295,34 @@
   },
   "import": {
     "title": "Import library",
-    "comingSoon": "Coming soon: import from StoryGraph, Literal and more"
+    "comingSoon": "Coming soon: import from StoryGraph, Literal and more",
+    "goodreadsTitle": "Import from Goodreads",
+    "goodreadsDesc": "Migrate your Goodreads library to Bookly in a few steps",
+    "howToExport": "How to export from Goodreads?",
+    "step1": "Go to",
+    "step2": "Click on \"Export Library\"",
+    "step3": "Wait for the file to be generated",
+    "step4": "Download the CSV file",
+    "step5": "Upload it below",
+    "selectFile": "Click to select the CSV file",
+    "invalidFile": "Please select a CSV file",
+    "changeFile": "Change",
+    "importing": "Importing...",
+    "importLibrary": "Import library",
+    "processing": "Processing books and downloading metadata... this may take a minute",
+    "successCount": "{{count}} books imported successfully!",
+    "errorGeneral": "Import error. Please check the file is valid.",
+    "imported": "Imported",
+    "enriched": "Enriched",
+    "skipped": "Skipped",
+    "total": "Total",
+    "completed": "Import completed!",
+    "completedDesc": "{{imported}} books have been added to your library with covers and metadata for {{enriched}}.",
+    "skippedDesc": "{{count}} books were already in your library.",
+    "someErrors": "Some errors",
+    "andMore": "and {{count}} more",
+    "importAnother": "Import another file",
+    "oauthNotAvailable": "Goodreads shut down its public API, so importing is only available via CSV file."
   },
   "notFound": {
     "title": "404",
@@ -479,7 +506,10 @@
     "readMore": "Read more",
     "showLess": "Show less",
     "useful": "Useful",
-    "votes": "votes"
+    "votes": "votes",
+    "translate": "Translate review",
+    "showOriginal": "Show original",
+    "translateError": "Could not translate the review"
   },
   "scanResult": {
     "bookFound": "Book found!",

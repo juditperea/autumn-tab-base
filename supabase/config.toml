@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.search-books]
 verify_jwt = false
+
+[functions.translate-review]
+verify_jwt = false
