@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +23,7 @@ interface BookMetadata {
 interface ImportResult {
   total: number;
   imported: number;
+  duplicates: number;
   skipped: number;
   enriched: number;
   errors: string[];
@@ -211,61 +213,26 @@ async function enrichBookMetadata(
 }
 
 // ============================================
-// CSV Parsing Functions
+// Input Validation (rows are parsed client-side)
 // ============================================
 
-function parseCSV(content: string): Record<string, string>[] {
-  const lines = content.split('\n');
-  if (lines.length < 2) return [];
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null);
 
-  const headerLine = lines[0];
-  const headers = parseCSVLine(headerLine);
-  
-  const results: Record<string, string>[] = [];
-  
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    
-    const values = parseCSVLine(line);
-    const row: Record<string, string> = {};
-    
-    headers.forEach((header, index) => {
-      row[header.trim()] = values[index]?.trim() || '';
-    });
-    
-    results.push(row);
-  }
-  
-  return results;
-}
+const RowSchema = z.object({
+  title: z.string().min(1).max(500),
+  author: z.string().max(300).default(""),
+  isbn: z.string().max(20).nullable().default(null),
+  isbn13: z.string().max(20).nullable().default(null),
+  myRating: z.number().int().min(0).max(5).default(0),
+  dateRead: isoDate,
+  dateAdded: isoDate,
+  shelf: z.string().max(100).default("to-read"),
+  pages: z.number().int().positive().nullable().default(null),
+});
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current);
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  
-  result.push(current);
-  return result;
-}
+const BodySchema = z.object({
+  rows: z.array(RowSchema).min(1).max(5000),
+});
 
 // ============================================
 // Helper Functions
