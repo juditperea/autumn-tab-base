@@ -1,51 +1,87 @@
 import { useState, useRef } from "react";
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, ExternalLink } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, ExternalLink, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { parseGoodreadsCsv, type GoodreadsRow, type ParsedGoodreadsCsv } from "@/lib/goodreadsCsv";
 
 interface ImportResult {
   total: number;
   imported: number;
-  skipped: number;
+  duplicates: number;
   enriched: number;
   errors: string[];
 }
 
+const PREVIEW_ROWS = 5;
+
 export const GoodreadsImport = () => {
   const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
+  const [parsed, setParsed] = useState<ParsedGoodreadsCsv | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (!selectedFile.name.endsWith('.csv')) {
-        toast.error(t("import.invalidFile"));
+    if (!selectedFile) return;
+
+    if (!selectedFile.name.endsWith(".csv")) {
+      toast.error(t("import.invalidFile"));
+      return;
+    }
+
+    setFile(selectedFile);
+    setResult(null);
+
+    try {
+      const content = await selectedFile.text();
+      const parsedCsv = parseGoodreadsCsv(content);
+
+      if (!parsedCsv.hasTitleColumn) {
+        toast.error(t("import.invalidCsv"));
+        setFile(null);
+        setParsed(null);
         return;
       }
-      setFile(selectedFile);
-      setResult(null);
+
+      if (parsedCsv.rows.length === 0) {
+        toast.error(t("import.emptyFile"));
+        setFile(null);
+        setParsed(null);
+        return;
+      }
+
+      setParsed(parsedCsv);
+    } catch {
+      toast.error(t("import.errorGeneral"));
+      setFile(null);
+      setParsed(null);
     }
   };
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!parsed) return;
 
     setIsImporting(true);
     setResult(null);
 
     try {
-      const csvContent = await file.text();
-      
       const { data, error } = await supabase.functions.invoke<ImportResult>("import-goodreads", {
-        body: { csvContent },
+        body: { rows: parsed.rows },
       });
 
       if (error) throw new Error(error.message);
@@ -66,14 +102,28 @@ export const GoodreadsImport = () => {
 
   const handleReset = () => {
     setFile(null);
+    setParsed(null);
     setResult(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
-  const progressPercent = result 
-    ? Math.round(((result.imported + result.skipped) / result.total) * 100)
+  const shelfLabel = (shelf: string): string => {
+    switch (shelf.toLowerCase()) {
+      case "read":
+        return t("import.shelfRead");
+      case "currently-reading":
+        return t("import.shelfReading");
+      case "to-read":
+        return t("import.shelfToRead");
+      default:
+        return shelf;
+    }
+  };
+
+  const progressPercent = result
+    ? Math.round(((result.imported + result.duplicates) / Math.max(1, result.total)) * 100)
     : 0;
 
   return (
@@ -113,7 +163,7 @@ export const GoodreadsImport = () => {
             className="hidden"
             id="goodreads-csv"
           />
-          
+
           {!file ? (
             <label
               htmlFor="goodreads-csv"
@@ -134,13 +184,65 @@ export const GoodreadsImport = () => {
           )}
         </div>
 
+        {/* Preview */}
+        {parsed && !result && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              <h4 className="font-medium text-sm">{t("import.previewTitle")}</h4>
+            </div>
+
+            <Alert>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription>
+                {t("import.detected", { count: parsed.rows.length })}
+                {parsed.invalidRows > 0 && ` ${t("import.noTitleSkipped", { count: parsed.invalidRows })}`}
+              </AlertDescription>
+            </Alert>
+
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("import.columnTitle")}</TableHead>
+                    <TableHead className="hidden sm:table-cell">{t("import.columnAuthor")}</TableHead>
+                    <TableHead className="w-16 text-center">{t("import.columnRating")}</TableHead>
+                    <TableHead className="hidden sm:table-cell w-28">{t("import.columnShelf")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {parsed.rows.slice(0, PREVIEW_ROWS).map((row, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium max-w-[160px] truncate">{row.title}</TableCell>
+                      <TableCell className="hidden sm:table-cell max-w-[120px] truncate text-muted-foreground">
+                        {row.author || "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {row.myRating > 0 ? `${row.myRating * 2}/10` : "—"}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-muted-foreground">
+                        {shelfLabel(row.shelf)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {parsed.rows.length > PREVIEW_ROWS && (
+              <p className="text-xs text-muted-foreground text-center">
+                {t("import.andMoreRows", { count: parsed.rows.length - PREVIEW_ROWS })}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Import Button */}
-        {file && !result && (
+        {parsed && !result && (
           <Button onClick={handleImport} disabled={isImporting} className="w-full">
             {isImporting ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("import.importing")}</>
             ) : (
-              <><Upload className="mr-2 h-4 w-4" />{t("import.importLibrary")}</>
+              <><Upload className="mr-2 h-4 w-4" />{t("import.importCount", { count: parsed.rows.length })}</>
             )}
           </Button>
         )}
@@ -157,7 +259,7 @@ export const GoodreadsImport = () => {
         {result && (
           <div className="space-y-3">
             <Progress value={progressPercent} />
-            
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
               <div className="p-2 rounded-lg bg-green-500/10">
                 <div className="text-lg font-bold text-green-600">{result.imported}</div>
@@ -168,8 +270,8 @@ export const GoodreadsImport = () => {
                 <div className="text-xs text-muted-foreground">{t("import.enriched")}</div>
               </div>
               <div className="p-2 rounded-lg bg-yellow-500/10">
-                <div className="text-lg font-bold text-yellow-600">{result.skipped}</div>
-                <div className="text-xs text-muted-foreground">{t("import.skipped")}</div>
+                <div className="text-lg font-bold text-yellow-600">{result.duplicates}</div>
+                <div className="text-xs text-muted-foreground">{t("import.duplicates")}</div>
               </div>
               <div className="p-2 rounded-lg bg-muted">
                 <div className="text-lg font-bold">{result.total}</div>
@@ -183,8 +285,16 @@ export const GoodreadsImport = () => {
                 <AlertTitle>{t("import.completed")}</AlertTitle>
                 <AlertDescription>
                   {t("import.completedDesc", { imported: result.imported, enriched: result.enriched })}
-                  {result.skipped > 0 && ` ${t("import.skippedDesc", { count: result.skipped })}`}
+                  {result.duplicates > 0 && ` ${t("import.duplicatesDesc", { count: result.duplicates })}`}
                 </AlertDescription>
+              </Alert>
+            )}
+
+            {result.imported === 0 && result.duplicates > 0 && result.errors.length === 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t("import.nothingNew")}</AlertTitle>
+                <AlertDescription>{t("import.nothingNewDesc")}</AlertDescription>
               </Alert>
             )}
 
