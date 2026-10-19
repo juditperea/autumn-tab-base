@@ -29,7 +29,8 @@ const COLUMN_ALIASES: Record<keyof typeof RAW_COLUMNS, string[]> = {
   myRating: ["my rating"],
   dateRead: ["date read"],
   dateAdded: ["date added"],
-  exclusiveShelf: ["exclusive shelf", "bookshelves"],
+  exclusiveShelf: ["exclusive shelf"],
+  bookshelves: ["bookshelves"],
   pages: ["number of pages"],
 };
 
@@ -42,6 +43,7 @@ const RAW_COLUMNS = {
   dateRead: "",
   dateAdded: "",
   exclusiveShelf: "",
+  bookshelves: "",
   pages: "",
 };
 
@@ -136,7 +138,10 @@ export function parseGoodreadsCsv(content: string): ParsedGoodreadsCsv {
       myRating: Number.isNaN(ratingRaw) ? 0 : Math.min(5, Math.max(0, ratingRaw)),
       dateRead: parseGoodreadsDate(get(values, col.dateRead)),
       dateAdded: parseGoodreadsDate(get(values, col.dateAdded)),
-      shelf: get(values, col.exclusiveShelf) || "to-read",
+      shelf:
+        get(values, col.exclusiveShelf) ||
+        get(values, col.bookshelves) ||
+        "to-read",
       pages: Number.isNaN(pagesRaw) ? null : pagesRaw,
     });
   }
